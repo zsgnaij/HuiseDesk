@@ -1,0 +1,66 @@
+{
+  "compilerOptions": {
+    // 基础配置
+    "target": "ES2020",                          // 编译目标 ES 版本
+    "module": "ESNext",                          // 模块系统
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],   // 包含的类型库
+    "moduleResolution": "node",                  // 模块解析策略
+    "resolveJsonModule": true,                   // 允许导入 JSON 文件
+    "esModuleInterop": true,                     // 启用 ES 模块互操作性
+    "allowSyntheticDefaultImports": true,        // 允许从没有默认导出的模块中默认导入
+    "isolatedModules": true,                     // 每个文件作为单独的模块
+    "skipLibCheck": true,                        // 跳过声明文件的类型检查
+    
+    // JSX 配置
+    "jsx": "react-jsx",                          // 支持 React 17+ 的新 JSX 转换
+    "jsxImportSource": "react",                  // JSX 导入源
+    
+    // 类型检查严格性
+    "strict": true,                              // 启用所有严格类型检查选项
+    "noUnusedLocals": true,                      // 报告未使用的局部变量
+    "noUnusedParameters": true,                  // 报告未使用的参数
+    "noImplicitReturns": true,                   // 报告缺少返回语句的函数
+    "noFallthroughCasesInSwitch": true,         // 报告 switch 语句的 fallthrough 错误
+    "forceConsistentCasingInFileNames": true,   // 强制文件名大小写一致
+    
+    // 路径映射（对应 Vite 的 alias 配置）
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["renderer/*"],
+      "@components/*": ["renderer/components/*"],
+      "@utils/*": ["renderer/utils/*"],
+      "@types/*": ["renderer/types/*"]
+    },
+    
+    // 输出配置
+    "outDir": "./dist",                          // 输出目录
+    "sourceMap": true,                           // 生成 source map
+    "declaration": true,                         // 生成声明文件
+    "declarationMap": true,                      // 生成声明文件的 source map
+    
+    // 其他选项
+    "allowJs": true,                             // 允许编译 JavaScript 文件
+    "checkJs": false,                            // 不检查 JavaScript 文件的类型
+    "incremental": true,                         // 启用增量编译
+    "experimentalDecorators": true,              // 启用装饰器语法支持
+    "emitDecoratorMetadata": true               // 为装饰器生成元数据
+  },
+  
+  // 包含的文件
+  "include": [
+    "renderer/**/*",
+    "main/**/*",
+    "server/**/*",
+    "scripts/**/*",
+    "*.ts",
+    "*.tsx"
+  ],
+  
+  // 排除的文件
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}
