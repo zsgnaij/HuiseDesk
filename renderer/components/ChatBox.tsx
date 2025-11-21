@@ -175,7 +175,9 @@ const ChatBox: React.FC = () => {
       });
     } catch (err) {
       console.error("发送消息失败:", err);
-      setError(`发送消息失败: ${err instanceof Error ? err.message : "未知错误"}`);
+      setError(
+        `发送消息失败: ${err instanceof Error ? err.message : "未知错误"}`
+      );
 
       // 更新助手消息显示错误
       setMessages((prev) =>
@@ -228,26 +230,36 @@ const ChatBox: React.FC = () => {
   useEffect(() => {
     const loadMarkdownLibraries = async () => {
       try {
-        const [reactMarkdownModule, remarkGfmModule, syntaxHighlighterModule, oneDarkThemeModule] = await Promise.all([
-          import('react-markdown').catch(() => null),
-          import('remark-gfm').catch(() => null),
-          import('react-syntax-highlighter').catch(() => null),
-          import('react-syntax-highlighter/dist/esm/styles/prism/one-dark').catch(() => 
-            import('react-syntax-highlighter/dist/cjs/styles/prism/one-dark').catch(() => null)
-          )
+        const [
+          reactMarkdownModule,
+          remarkGfmModule,
+          syntaxHighlighterModule,
+          oneDarkThemeModule,
+        ] = await Promise.all([
+          import("react-markdown").catch(() => null),
+          import("remark-gfm").catch(() => null),
+          import("react-syntax-highlighter").catch(() => null) as Promise<any>,
+          import(
+            "react-syntax-highlighter/dist/esm/styles/prism/one-dark"
+          ).catch(() =>
+            import(
+              "react-syntax-highlighter/dist/cjs/styles/prism/one-dark"
+            ).catch(() => null)
+          ) as Promise<any>,
         ]);
-        
+
         if (reactMarkdownModule) ReactMarkdownLib = reactMarkdownModule.default;
         if (remarkGfmModule) remarkGfmLib = remarkGfmModule.default;
-        if (syntaxHighlighterModule) SyntaxHighlighterLib = syntaxHighlighterModule.Prism;
+        if (syntaxHighlighterModule)
+          SyntaxHighlighterLib = syntaxHighlighterModule.Prism;
         if (oneDarkThemeModule) oneDarkLib = oneDarkThemeModule.default;
       } catch (error) {
-        console.warn('Failed to load markdown dependencies:', error);
+        console.warn("Failed to load markdown dependencies:", error);
       }
     };
-    
+
     loadMarkdownLibraries();
-    
+
     // Existing model fetching code
     const fetchModels = async () => {
       try {
@@ -304,30 +316,39 @@ const ChatBox: React.FC = () => {
               )}
             </div>
             <div className="message-content">
-              {message.role === "assistant" && ReactMarkdownLib ? (
-                React.createElement(ReactMarkdownLib, {
-                  remarkPlugins: [remarkGfmLib],
-                  children: message.content,
-                  components: {
-                    code({node, inline, className, children, ...props}: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      return !inline && match && SyntaxHighlighterLib ? (
-                        React.createElement(SyntaxHighlighterLib, {
-                          style: oneDarkLib,
-                          language: match[1],
-                          PreTag: "div",
-                          ...props
-                        }, String(children).replace(/\n$/, ''))
-                      ) : (
-                        React.createElement('code', {className, ...props}, children)
-                      );
-                    }
-                  }
-                })
-              ) : (
-                message.content
-              )}
-
+              {message.role === "assistant" && ReactMarkdownLib
+                ? React.createElement(ReactMarkdownLib, {
+                    remarkPlugins: [remarkGfmLib],
+                    children: message.content,
+                    components: {
+                      code({
+                        node,
+                        inline,
+                        className,
+                        children,
+                        ...props
+                      }: any) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        return !inline && match && SyntaxHighlighterLib
+                          ? React.createElement(
+                              SyntaxHighlighterLib,
+                              {
+                                style: oneDarkLib,
+                                language: match[1],
+                                PreTag: "div",
+                                ...props,
+                              },
+                              String(children).replace(/\n$/, "")
+                            )
+                          : React.createElement(
+                              "code",
+                              { className, ...props },
+                              children
+                            );
+                      },
+                    },
+                  })
+                : message.content}
             </div>
           </div>
         ))}
@@ -360,7 +381,7 @@ const ChatBox: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .chat-container {
           display: flex;
           flex-direction: column;
@@ -442,9 +463,17 @@ const ChatBox: React.FC = () => {
 
         .message.assistant {
           align-self: flex-start;
-          background: white;
-          border: 1px solid #e0e0e0;
-          border-top-left-radius: 2px;
+          background: linear-gradient(145deg, #f8f9fa, #ffffff);
+          border: 1px solid #e9ecef;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+          border-bottom-right-radius: 8px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+          transition: box-shadow 0.2s ease;
+        }
+
+        .message.assistant:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .message-header {
@@ -471,174 +500,10 @@ const ChatBox: React.FC = () => {
 
         .message-content {
           font-size: 15px;
-          line-height: 1.5;
-          color: #333;
-        }
-
-        /* Markdown styles */
-        .message-content :global(p) {
-          margin: 0 0 10px 0;
-        }
-
-        .message-content :global(h1),
-        .message-content :global(h2),
-        .message-content :global(h3) {
-          margin: 15px 0 10px 0;
-          font-weight: bold;
-        }
-
-        .message-content :global(h1) {
-          font-size: 1.5em;
-        }
-
-        .message-content :global(h2) {
-          font-size: 1.3em;
-        }
-
-        .message-content :global(h3) {
-          font-size: 1.1em;
-        }
-
-        .message-content :global(ul),
-        .message-content :global(ol) {
-          margin: 12px 0;
-          padding-left: 12px;
-        }
-
-        .message-content :global(ul) {
-          list-style-type: none;
-          padding-left: 20px;
-        }
-
-        .message-content :global(ol) {
-          list-style-type: none;
-          counter-reset: list-counter;
-          padding-left: 20px;
-        }
-
-        .message-content :global(ul li) {
-          position: relative;
-          margin-bottom: 8px;
-          padding-left: 25px;
           line-height: 1.6;
-        }
-
-        .message-content :global(ul li)::before {
-          content: "•";
-          color: #3498db;
-          position: absolute;
-          left: 0;
-          top: 0;
-        }
-
-        .message-content :global(ol li) {
-          position: relative;
-          margin-bottom: 8px;
-          padding-left: 25px;
-          line-height: 1.6;
-          counter-increment: list-counter;
-        }
-
-        .message-content :global(ol li)::before {
-          content: counter(list-counter) ".";
-          color: #3498db;
-          position: absolute;
-          left: 0;
-          top: 0;
-        }
-
-        .message-content :global(ul ul),
-        .message-content :global(ol ol),
-        .message-content :global(ul ol),
-        .message-content :global(ol ul) {
-          margin: 8px 0;
-          padding-left: 0;
-        }
-
-        .message-content :global(ul ul li) {
-          padding-left: 30px;
-        }
-
-        .message-content :global(ol ol li) {
-          padding-left: 30px;
-        }
-
-        .message-content :global(ul ol li),
-        .message-content :global(ol ul li) {
-          padding-left: 30px;
-        }
-
-        .message-content :global(ul ul li)::before {
-          content: "◦";
-        }
-
-        .message-content :global(ol ol li)::before {
-          content: counter(list-counter) ".";
-        }
-
-        .message-content :global(li p) {
-          margin: 0;
-        }
-
-        .message-content :global(li > ul),
-        .message-content :global(li > ol) {
-          margin-top: 8px;
-          margin-bottom: 0;
-        }
-
-        .message-content :global(a) {
-          color: #3498db;
-          text-decoration: underline;
-        }
-
-        .message-content :global(blockquote) {
-          margin: 10px 0;
-          padding: 10px 15px;
-          border-left: 4px solid #3498db;
-          background-color: #f8f9fa;
-          color: #555;
-        }
-
-        .message-content :global(code) {
-          background-color: #f0f0f0;
-          padding: 2px 4px;
-          border-radius: 3px;
-          font-family: 'Courier New', monospace;
-          font-size: 0.9em;
-        }
-
-        .message-content :global(pre) {
-          margin: 10px 0;
-          padding: 12px 15px;
-          border-radius: 5px;
-          overflow-x: auto;
-        }
-
-        .message-content :global(pre code) {
-          background: none;
-          padding: 0;
-        }
-
-        .message-content :global(table) {
-          border-collapse: collapse;
-          width: 100%;
-          margin: 10px 0;
-        }
-
-        .message-content :global(th),
-        .message-content :global(td) {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-
-        .message-content :global(th) {
-          background-color: #f2f2f2;
-          font-weight: bold;
-        }
-
-        .message-content :global(tr:nth-child(even)) {
-          background-color: #f9f9f9;
+          color: #2c3e50;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
         }
 
         .loading-indicator {
@@ -730,7 +595,150 @@ const ChatBox: React.FC = () => {
           opacity: 0.5;
           cursor: not-allowed;
         }
-      `}</style>
+        
+        /* Markdown 样式优化 */
+        .message-content h1,
+        .message-content h2,
+        .message-content h3,
+        .message-content h4,
+        .message-content h5,
+        .message-content h6 {
+          margin: 16px 0 8px 0;
+          font-weight: 600;
+          line-height: 1.25;
+        }
+
+        .message-content h1 {
+          font-size: 2em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 0.3em;
+        }
+
+        .message-content h2 {
+          font-size: 1.5em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 0.3em;
+        }
+
+        .message-content h3 {
+          font-size: 1.25em;
+        }
+
+        .message-content h4 {
+          font-size: 1em;
+        }
+
+        .message-content p {
+          margin: 8px 0;
+          line-height: 1.6;
+        }
+
+        .message-content a {
+          color: #3498db;
+          text-decoration: none;
+        }
+
+        .message-content a:hover {
+          text-decoration: underline;
+        }
+
+        .message-content strong {
+          font-weight: 600;
+        }
+
+        .message-content em {
+          font-style: italic;
+        }
+
+        .message-content del {
+          text-decoration: line-through;
+        }
+
+        .message-content blockquote {
+          margin: 16px 0;
+          padding: 0 1em;
+          color: #6a737d;
+          border-left: 0.25em solid #dfe2e5;
+        }
+
+        .message-content ul,
+        .message-content ol {
+          padding-left: 2em;
+          margin: 8px 0;
+        }
+
+        .message-content li {
+          margin: 4px 0;
+        }
+
+        .message-content li > p {
+          margin: 8px 0;
+        }
+
+        .message-content code {
+          padding: 0.2em 0.4em;
+          margin: 0;
+          font-size: 85%;
+          background-color: rgba(27, 31, 35, 0.05);
+          border-radius: 3px;
+          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        .message-content pre {
+          padding: 16px;
+          overflow: auto;
+          font-size: 85%;
+          line-height: 1.45;
+          background-color: #f6f8fa;
+          border-radius: 3px;
+          margin: 16px 0;
+        }
+
+        .message-content pre > code {
+          padding: 0;
+          margin: 0;
+          font-size: 100%;
+          word-break: normal;
+          white-space: pre;
+          background: transparent;
+          border: 0;
+        }
+
+        .message-content hr {
+          height: 0.25em;
+          padding: 0;
+          margin: 24px 0;
+          background-color: #e1e4e8;
+          border: 0;
+        }
+
+        .message-content table {
+          display: block;
+          width: 100%;
+          overflow: auto;
+          border-collapse: collapse;
+          margin: 16px 0;
+        }
+
+        .message-content th {
+          font-weight: 600;
+        }
+
+        .message-content td,
+        .message-content th {
+          padding: 6px 13px;
+          border: 1px solid #dfe2e5;
+        }
+
+        .message-content tr:nth-child(2n) {
+          background-color: #f6f8fa;
+        }
+
+        .message-content img {
+          max-width: 100%;
+          box-sizing: content-box;
+        }
+      `}} />
     </div>
   );
 };
