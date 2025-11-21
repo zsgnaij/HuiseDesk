@@ -264,7 +264,7 @@ app.get('/api/models', (req, res) => {
         res.json({
             success: true,
             models,
-            default: 'mistral'
+            default: 'deepseek'
         });
     } catch (error) {
         console.error('[错误] 获取模型列表失败:', error);
