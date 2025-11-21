@@ -31,7 +31,7 @@ const ChatBox: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("mistral");
+  const [selectedModel, setSelectedModel] = useState<string>("deepseek");
 
   // 引用
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -197,7 +197,7 @@ const ChatBox: React.FC = () => {
       });
     } catch (err) {
       console.error("发送消息失败:", err);
-      setError(`发送消息失败: ${err.message || "未知错误"}`);
+      setError(`发送消息失败: ${err instanceof Error ? err.message : "未知错误"}`);
 
       // 更新助手消息显示错误
       setMessages((prev) =>
@@ -206,7 +206,7 @@ const ChatBox: React.FC = () => {
             ? {
                 ...msg,
                 content: `抱歉，处理请求时发生错误。\n${
-                  err.message || "未知错误"
+                  err instanceof Error ? err.message : "未知错误"
                 }`,
               }
             : msg
@@ -249,10 +249,12 @@ const ChatBox: React.FC = () => {
   return (
     <div className="chat-container">
       <div className="chat-header">
+        <div></div>
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
           disabled={loading}
+          className="model-select"
         >
           {availableModels.map((model) => (
             <option key={model.id} value={model.id}>
@@ -311,7 +313,7 @@ const ChatBox: React.FC = () => {
         </div>
       </div>
 
-      <style jsx={true}>{`
+      <style jsx>{`
         .chat-container {
           display: flex;
           flex-direction: column;
@@ -334,11 +336,39 @@ const ChatBox: React.FC = () => {
           color: #333;
         }
 
-        .chat-header select {
-          padding: 8px 12px;
+        .model-select {
+          padding: 8px 30px 8px 12px;
           border: 1px solid #ddd;
-          border-radius: 4px;
+          border-radius: 20px;
           font-size: 14px;
+          background-color: #f8f9fa;
+          color: #333;
+          appearance: none;
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
+          background-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          min-width: 120px;
+          text-align-last: center;
+        }
+
+        .model-select:hover:not(:disabled) {
+          border-color: #3498db;
+          background-color: #fff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .model-select:focus {
+          outline: none;
+          border-color: #3498db;
+          box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .model-select:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .messages-container {

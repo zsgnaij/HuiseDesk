@@ -347,7 +347,7 @@ export default app;
 // 修改upload-to-shotgrid端点中的路径处理
 app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => {
   try {
-    const { assetName, versionName, prompt } = req.body;
+    const { assetName, assetType, versionName } = req.body;
     const imageFile = req.file;
     
     // 验证参数
@@ -367,13 +367,17 @@ app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => 
     // 重命名文件以保留原始扩展名
     fs.renameSync(imagePath, newImagePath);
     
-    // 调用Python脚本上传到ShotGrid
+    // 调用Python脚本上传到ShotGrid，传递资产类型参数
     const pythonScriptPath = path.join(__dirname, '../sg/shotgrid/src/sg.py');
     let cmd = `python "${pythonScriptPath}" upload "${newImagePath}" "${assetName}"`;
     
     if (versionName && typeof versionName === 'string') {
       cmd += ` "${versionName}"`;
     }
+    
+    // 添加资产类型参数
+    const assetTypeValue = assetType && typeof assetType === 'string' ? assetType : 'Prop';
+    cmd += ` "${assetTypeValue}"`;
     
     console.log(`执行命令: ${cmd}`);
     const { stdout, stderr } = await execPromise(cmd);
@@ -415,24 +419,6 @@ app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => 
       fs.unlinkSync(newImagePath);
     } catch (e) {
       console.warn('清理临时文件失败:', e);
-    }
-    
-    // 如果有prompt，调用AI模型进行分析
-    if (prompt && typeof prompt === 'string') {
-      try {
-        // 调用默认模型（mistral）进行分析
-        const messages = [
-          new SystemMessage('你是一个专业的图片分析师，根据用户的提示分析图片。'),
-          new HumanMessage(`${prompt}\n图片已上传到ShotGrid，资产名称: ${assetName}，版本: ${result.data?.version_name || '自动生成'}`)
-        ];
-        
-        const analysisResponse = await mistral.invoke(messages);
-        result.ai_analysis = analysisResponse.content;
-      } catch (aiError) {
-        console.error('AI分析失败:', aiError);
-        // AI分析失败不影响主要功能
-        result.ai_analysis_error = aiError.message;
-      }
     }
     
     return res.json(result);

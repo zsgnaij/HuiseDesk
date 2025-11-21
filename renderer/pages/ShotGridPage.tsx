@@ -1,23 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ShotGridUploader from '@components/ShotGridUploader';
 
 /**
- * 首页组件
+ * ShotGrid 页面组件
  */
-const HomePage: React.FC = () => {
+const ShotGridPage: React.FC = () => {
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   return (
     <div style={styles.container}>
+      {/* 浮动导航图标 */}
+      <div 
+        style={styles.floatingNav}
+        onMouseEnter={() => setIsNavOpen(true)}
+      >
+        <button 
+          style={styles.navButton}
+          onClick={() => setIsNavOpen(!isNavOpen)}
+        >
+          ☰
+        </button>
+        
+        {/* 展开的导航菜单 */}
+        {isNavOpen && (
+          <div 
+            style={styles.navMenu}
+            onMouseLeave={() => setIsNavOpen(false)}
+          >
+            <div style={styles.navHeader}>
+              <span style={styles.navTitle}>HuiseDesk</span>
+            </div>
+            <nav style={styles.navLinks}>
+              <Link to="/" style={styles.navLink}>首页</Link>
+              <Link to="/chat" style={styles.navLink}>聊天</Link>
+              <Link to="/shotgrid" style={styles.navLinkActive}>ShotGrid</Link>
+            </nav>
+          </div>
+        )}
+      </div>
+      
       {/* 主内容区 */}
       <main style={styles.main}>
-        <div style={styles.content}>
-          <h1 style={styles.title}>欢迎使用 HuiseDesk</h1>
-          <p style={styles.description}>这是一个基于 React 的桌面应用</p>
-          <div style={styles.linkContainer}>
-            <Link to="/chat" style={styles.link}>进入聊天页面</Link>
-            <Link to="/shotgrid" style={styles.link}> ShotGrid 资源上传</Link>
-          </div>
-        </div>
+        <ShotGridUploader />
       </main>
     </div>
   );
@@ -102,39 +127,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   main: {
     flex: 1,
     overflow: 'auto',
-  },
-  content: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    padding: '2rem',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: '2.5rem',
-    marginBottom: '1rem',
-    color: '#333',
-  },
-  description: {
-    fontSize: '1.2rem',
-    marginBottom: '2rem',
-    color: '#666',
-  },
-  linkContainer: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  link: {
-    padding: '0.8rem 1.5rem',
-    fontSize: '1rem',
-    backgroundColor: '#4a90e2',
-    color: 'white',
-    textDecoration: 'none',
-    borderRadius: '4px',
-    transition: 'background-color 0.3s',
+    padding: '20px',
   },
 };
 
-export default HomePage;
+export default ShotGridPage;

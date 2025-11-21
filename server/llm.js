@@ -22,17 +22,17 @@ export const mistral = new ChatMistralAI({
 
 // Available models configuration
 export const AVAILABLE_MODELS = {
-    mistral: {
-        id: 'mistral',
-        name: 'Mistral',
-        instance: mistral,
-        description: 'Mistral AI'
-    },
     deepseek: {
         id: 'deepseek',
         name: 'DeepSeek',
         instance: deepseek,
         description: 'DeepSeek'
+    },
+    mistral: {
+        id: 'mistral',
+        name: 'Mistral',
+        instance: mistral,
+        description: 'Mistral AI'
     }
 };
 

@@ -30,7 +30,7 @@ project_id = project["id"]
 print(f"找到项目: ID={project_id}, Name={PROJECT_NAME}")
 
 
-def upload_image_to_shotgrid(image_path, asset_name, version_name=None):
+def upload_image_to_shotgrid(image_path, asset_name, version_name=None, asset_type="Prop"):
     """
     上传图片到 ShotGrid
     
@@ -38,6 +38,7 @@ def upload_image_to_shotgrid(image_path, asset_name, version_name=None):
         image_path: 图片本地路径
         asset_name: 资产名称
         version_name: 版本名称，如果不提供则自动生成
+        asset_type: 资产类型，默认为"Prop"
     
     Returns:
         dict: 包含成功状态和信息的字典
@@ -74,7 +75,7 @@ def upload_image_to_shotgrid(image_path, asset_name, version_name=None):
                 {
                     "project": {"type": "Project", "id": project_id},
                     "code": asset_name,
-                    "sg_asset_type": "Prop"  # 使用常见的资产类型，可根据需要修改
+                    "sg_asset_type": asset_type  # 使用传入的资产类型
                 }
             )
             if not asset or "id" not in asset:
@@ -136,6 +137,7 @@ def upload_image_to_shotgrid(image_path, asset_name, version_name=None):
             "data": {
                 "asset_name": asset_name,
                 "asset_id": asset["id"],
+                "asset_type": asset_type,
                 "version_name": version_name,
                 "version_id": version["id"],
                 "image_url": image_url,
@@ -229,15 +231,16 @@ if __name__ == "__main__":
             image_path = sys.argv[2]
             asset_name = sys.argv[3]
             version_name = sys.argv[4] if len(sys.argv) > 4 else None
+            asset_type = sys.argv[5] if len(sys.argv) > 5 else "Prop"  # 新增资产类型参数
             
             # 执行上传
-            result = upload_image_to_shotgrid(image_path, asset_name, version_name)
+            result = upload_image_to_shotgrid(image_path, asset_name, version_name, asset_type)
             # 输出 JSON 格式结果
             print(json.dumps(result, ensure_ascii=False))
         else:
             # 显示帮助信息
             print("用法:")
-            print("  上传图片: python sg.py upload <图片路径> <资产名称> [版本名称]")
+            print("  上传图片: python sg.py upload <图片路径> <资产名称> [版本名称] [资产类型]")
             print("  下载资产: python sg.py")
     else:
         # 默认执行下载功能

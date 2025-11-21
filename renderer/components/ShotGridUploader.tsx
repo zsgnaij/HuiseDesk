@@ -15,11 +15,22 @@ interface UploadResult {
 const ShotGridUploader: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [assetName, setAssetName] = useState<string>('');
+  const [assetType, setAssetType] = useState<string>('Prop'); // Default asset type
   const [versionName, setVersionName] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Asset types for the dropdown
+  const assetTypes = [
+    { value: 'Prop', label: '道具 (Prop)' },
+    { value: 'Character', label: '角色 (Character)' },
+    { value: 'Environment', label: '环境 (Environment)' },
+    { value: 'Vehicle', label: '载具 (Vehicle)' },
+    { value: 'Weapon', label: '武器 (Weapon)' },
+    { value: 'Other', label: '其他 (Other)' }
+  ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -56,11 +67,13 @@ const ShotGridUploader: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('image', selectedFile); // Changed from 'file' to 'image' to match Multer config
       formData.append('assetName', assetName);
+      formData.append('assetType', assetType);
       formData.append('versionName', versionName);
 
-      const response = await fetch('http://localhost:3000/api/upload/image', {
+      // Fixed the endpoint URL to match the backend
+      const response = await fetch('http://localhost:3000/api/upload-to-shotgrid', {
         method: 'POST',
         body: formData,
       });
@@ -76,6 +89,7 @@ const ShotGridUploader: React.FC = () => {
         // 重置表单
         setSelectedFile(null);
         setAssetName('');
+        setAssetType('Prop'); // Reset to default
         setVersionName('');
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -94,6 +108,7 @@ const ShotGridUploader: React.FC = () => {
   const handleCancel = () => {
     setSelectedFile(null);
     setAssetName('');
+    setAssetType('Prop'); // Reset to default
     setVersionName('');
     setError('');
     setResult(null);
@@ -104,7 +119,7 @@ const ShotGridUploader: React.FC = () => {
 
   return (
     <div className="image-uploader">
-      <h2>图片上传工具</h2>
+      <h2>ShotGrid上传工具</h2>
       
       <div className="form-group">
         <label htmlFor="assetName">资产名称：</label>
@@ -116,6 +131,23 @@ const ShotGridUploader: React.FC = () => {
           placeholder="请输入ShotGrid资产名称"
           disabled={uploading}
         />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="assetType">资产类型：</label>
+        <select
+          id="assetType"
+          value={assetType}
+          onChange={(e) => setAssetType(e.target.value)}
+          disabled={uploading}
+          className="asset-type-select"
+        >
+          {assetTypes.map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="form-group">
@@ -211,6 +243,40 @@ const ShotGridUploader: React.FC = () => {
           border: 1px solid #ddd;
           border-radius: 4px;
           font-size: 14px;
+        }
+        
+        .asset-type-select {
+          width: 100%;
+          padding: 8px 30px 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 20px;
+          font-size: 14px;
+          background-color: #f8f9fa;
+          color: #333;
+          appearance: none;
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
+          background-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .asset-type-select:hover:not(:disabled) {
+          border-color: #3498db;
+          background-color: #fff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .asset-type-select:focus {
+          outline: none;
+          border-color: #3498db;
+          box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .asset-type-select:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         
         input[type="file"] {
