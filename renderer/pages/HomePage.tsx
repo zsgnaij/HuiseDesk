@@ -15,7 +15,7 @@ const HomePage: React.FC = () => {
           <p style={styles.description}>这是一个基于 React 的桌面应用</p>
           <div style={styles.linkContainer}>
             <Link to="/chat" style={styles.link}>进入聊天页面</Link>
-            <Link to="/shotgrid" style={styles.link}> ShotGrid 资源上传</Link>
+            <Link to="/shotgrid" style={styles.link}>ShotGrid</Link>
           </div>
         </div>
       </main>
