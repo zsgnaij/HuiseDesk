@@ -4,9 +4,11 @@ import path from 'path';
 
 // Vite 配置文档: https://vitejs.dev/config/
 export default defineConfig({
-    // 项目根目录（设置为项目根目录以访问所有文件）
-    root: path.resolve(__dirname, '..'),
-    // 公共资源目录
+    // 设置基础路径为空字符串，使应用能从根路径访问
+    base: '',
+    // 项目根目录设置为 renderer 目录
+    root: path.resolve(__dirname, '../renderer'),
+    // 公共资源目录设置为项目根目录下的 public 目录
     publicDir: path.resolve(__dirname, '../public'),
     // 插件配置
     plugins: [
@@ -21,7 +23,7 @@ export default defineConfig({
             }
         })
     ],
-    
+
     // 路径解析配置
     resolve: {
         // 配置路径别名，方便模块导入
@@ -34,7 +36,7 @@ export default defineConfig({
         // 支持的文件扩展名
         extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
     },
-    
+
     // 构建配置
     build: {
         outDir: path.resolve(__dirname, '../dist'), // 输出目录
@@ -45,10 +47,10 @@ export default defineConfig({
         emptyOutDir: true,
         // Rollup 配置
         rollupOptions: {
-            input: path.resolve(__dirname, '../public/index.html')
+            input: path.resolve(__dirname, '../renderer/index.html')
         }
     },
-    
+
     // 开发服务器配置
     server: {
         port: 5173, // 开发服务器端口
@@ -61,10 +63,12 @@ export default defineConfig({
         // 允许访问根目录之外的文件
         fs: {
             strict: false,
-            allow: [path.resolve(__dirname, '..')]
-        }
+            allow: [path.resolve(__dirname, '..'), "public", "renderer"]
+        },
+        // 支持 SPA 路由，当访问不存在的路径时返回 index.html
+        historyApiFallback: true
     },
-    
+
     // TypeScript 类型检查（仅在开发模式下）
     esbuild: {
         // 支持 JSX 语法
@@ -72,7 +76,7 @@ export default defineConfig({
         // 在生产环境中移除 console 和 debugger
         drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : []
     },
-    
+
     // 优化依赖预构建
     optimizeDeps: {
         // 需要预构建的依赖

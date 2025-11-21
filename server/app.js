@@ -3,10 +3,37 @@ import express from 'express';
 import cors from 'cors';
 import { deepseek, mistral, getLLM, getAvailableModels } from './llm.js';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import multer from 'multer';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// 在ES模块中创建__dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 创建 Express 应用
 const app = express();
 const PORT = process.env.PORT || 3000;
+const execPromise = promisify(exec);
+
+// 配置文件上传
+const upload = multer({
+  dest: path.join(__dirname, '../sg/shotgrid/temp/'),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/tiff', 'image/bmp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的文件类型'), false);
+    }
+  }
+});
 
 // 中间件配置
 app.use(cors()); // 允许跨域请求
@@ -315,3 +342,116 @@ process.on('SIGINT', () => {
 });
 
 export default app;
+
+
+// 修改upload-to-shotgrid端点中的路径处理
+app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => {
+  try {
+    const { assetName, versionName, prompt } = req.body;
+    const imageFile = req.file;
+    
+    // 验证参数
+    if (!imageFile) {
+      return res.status(400).json({ success: false, error: '请上传图片文件' });
+    }
+    
+    if (!assetName || typeof assetName !== 'string') {
+      return res.status(400).json({ success: false, error: '缺少有效的资产名称' });
+    }
+    
+    // 构建完整的图片路径
+    const imagePath = imageFile.path;
+    const imageExt = path.extname(imageFile.originalname);
+    const newImagePath = `${imagePath}${imageExt}`;
+    
+    // 重命名文件以保留原始扩展名
+    fs.renameSync(imagePath, newImagePath);
+    
+    // 调用Python脚本上传到ShotGrid
+    const pythonScriptPath = path.join(__dirname, '../sg/shotgrid/src/sg.py');
+    let cmd = `python "${pythonScriptPath}" upload "${newImagePath}" "${assetName}"`;
+    
+    if (versionName && typeof versionName === 'string') {
+      cmd += ` "${versionName}"`;
+    }
+    
+    console.log(`执行命令: ${cmd}`);
+    const { stdout, stderr } = await execPromise(cmd);
+    
+    if (stderr && stderr.trim()) {
+      console.error('Python脚本错误:', stderr);
+      // 检查stderr是否包含有用的JSON输出
+      if (stderr.trim().startsWith('{') && stderr.trim().endsWith('}')) {
+        try {
+          const errorResult = JSON.parse(stderr);
+          return res.json(errorResult);
+        } catch (e) {
+          // 不是有效的JSON
+        }
+      }
+    }
+    
+    // 解析输出结果
+    let result;
+    try {
+      // 尝试从stdout解析
+      result = JSON.parse(stdout.trim());
+    } catch (e) {
+      // 如果stdout解析失败，尝试从stderr解析
+      try {
+        result = JSON.parse(stderr.trim());
+      } catch (e2) {
+        return res.status(500).json({
+          success: false,
+          error: '解析Python脚本输出失败',
+          stdout,
+          stderr
+        });
+      }
+    }
+    
+    // 清理临时文件
+    try {
+      fs.unlinkSync(newImagePath);
+    } catch (e) {
+      console.warn('清理临时文件失败:', e);
+    }
+    
+    // 如果有prompt，调用AI模型进行分析
+    if (prompt && typeof prompt === 'string') {
+      try {
+        // 调用默认模型（mistral）进行分析
+        const messages = [
+          new SystemMessage('你是一个专业的图片分析师，根据用户的提示分析图片。'),
+          new HumanMessage(`${prompt}\n图片已上传到ShotGrid，资产名称: ${assetName}，版本: ${result.data?.version_name || '自动生成'}`)
+        ];
+        
+        const analysisResponse = await mistral.invoke(messages);
+        result.ai_analysis = analysisResponse.content;
+      } catch (aiError) {
+        console.error('AI分析失败:', aiError);
+        // AI分析失败不影响主要功能
+        result.ai_analysis_error = aiError.message;
+      }
+    }
+    
+    return res.json(result);
+    
+  } catch (error) {
+    console.error('上传到ShotGrid失败:', error);
+    
+    // 清理可能的临时文件
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.warn('清理临时文件失败:', e);
+      }
+    }
+    
+    return res.status(500).json({
+      success: false,
+      error: error.message || '服务器内部错误'
+    });
+  }
+});
