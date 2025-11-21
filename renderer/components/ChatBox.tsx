@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
+// State variables for markdown libraries
+let ReactMarkdownLib: any = null;
+let remarkGfmLib: any = null;
+let SyntaxHighlighterLib: any = null;
+let oneDarkLib: any = null;
+
 /**
  * 聊天消息接口
  */
@@ -47,34 +53,6 @@ const ChatBox: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  /**
-   * 加载可用模型
-   */
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/api/models");
-        const data = await response.json();
-        if (data.success && data.models) {
-          setAvailableModels(data.models);
-          // 设置默认模型
-          if (data.default) {
-            setSelectedModel(data.default);
-          }
-        }
-      } catch (err) {
-        console.error("获取模型列表失败:", err);
-        // 如果获取失败，使用默认模型
-        setAvailableModels([
-          { id: "deepseek", name: "DeepSeek", description: "DeepSeek" },
-          { id: "mistral", name: "Mistral", description: "Mistral AI" },
-        ]);
-      }
-    };
-
-    fetchModels();
-  }, []);
 
   /**
    * 发送消息（使用 fetch-event-source 处理流式输出）
@@ -246,6 +224,55 @@ const ChatBox: React.FC = () => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  // Load markdown dependencies when component mounts
+  useEffect(() => {
+    const loadMarkdownLibraries = async () => {
+      try {
+        const [reactMarkdownModule, remarkGfmModule, syntaxHighlighterModule, oneDarkThemeModule] = await Promise.all([
+          import('react-markdown').catch(() => null),
+          import('remark-gfm').catch(() => null),
+          import('react-syntax-highlighter').catch(() => null),
+          import('react-syntax-highlighter/dist/esm/styles/prism/one-dark').catch(() => 
+            import('react-syntax-highlighter/dist/cjs/styles/prism/one-dark').catch(() => null)
+          )
+        ]);
+        
+        if (reactMarkdownModule) ReactMarkdownLib = reactMarkdownModule.default;
+        if (remarkGfmModule) remarkGfmLib = remarkGfmModule.default;
+        if (syntaxHighlighterModule) SyntaxHighlighterLib = syntaxHighlighterModule.Prism;
+        if (oneDarkThemeModule) oneDarkLib = oneDarkThemeModule.default;
+      } catch (error) {
+        console.warn('Failed to load markdown dependencies:', error);
+      }
+    };
+    
+    loadMarkdownLibraries();
+    
+    // Existing model fetching code
+    const fetchModels = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/api/models");
+        const data = await response.json();
+        if (data.success && data.models) {
+          setAvailableModels(data.models);
+          // 设置默认模型
+          if (data.default) {
+            setSelectedModel(data.default);
+          }
+        }
+      } catch (err) {
+        console.error("获取模型列表失败:", err);
+        // 如果获取失败，使用默认模型
+        setAvailableModels([
+          { id: "deepseek", name: "DeepSeek", description: "DeepSeek" },
+          { id: "mistral", name: "Mistral", description: "Mistral AI" },
+        ]);
+      }
+    };
+
+    fetchModels();
+  }, []);
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -276,14 +303,34 @@ const ChatBox: React.FC = () => {
                 <span className="model">({message.model})</span>
               )}
             </div>
-            <div className="message-content">{message.content}</div>
+            <div className="message-content">
+              {message.role === "assistant" && ReactMarkdownLib ? (
+                React.createElement(ReactMarkdownLib, {
+                  remarkPlugins: [remarkGfmLib],
+                  children: message.content,
+                  components: {
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      return !inline && match && SyntaxHighlighterLib ? (
+                        React.createElement(SyntaxHighlighterLib, {
+                          style: oneDarkLib,
+                          language: match[1],
+                          PreTag: "div",
+                          ...props
+                        }, String(children).replace(/\n$/, ''))
+                      ) : (
+                        React.createElement('code', {className, ...props}, children)
+                      );
+                    }
+                  }
+                })
+              ) : (
+                message.content
+              )}
+
+            </div>
           </div>
         ))}
-        {loading && (
-          <div className="loading-indicator">
-            <span>生成中...</span>
-          </div>
-        )}
         {error && <div className="error-message">{error}</div>}
         <div ref={messagesEndRef} />
       </div>
@@ -426,6 +473,172 @@ const ChatBox: React.FC = () => {
           font-size: 15px;
           line-height: 1.5;
           color: #333;
+        }
+
+        /* Markdown styles */
+        .message-content :global(p) {
+          margin: 0 0 10px 0;
+        }
+
+        .message-content :global(h1),
+        .message-content :global(h2),
+        .message-content :global(h3) {
+          margin: 15px 0 10px 0;
+          font-weight: bold;
+        }
+
+        .message-content :global(h1) {
+          font-size: 1.5em;
+        }
+
+        .message-content :global(h2) {
+          font-size: 1.3em;
+        }
+
+        .message-content :global(h3) {
+          font-size: 1.1em;
+        }
+
+        .message-content :global(ul),
+        .message-content :global(ol) {
+          margin: 12px 0;
+          padding-left: 12px;
+        }
+
+        .message-content :global(ul) {
+          list-style-type: none;
+          padding-left: 20px;
+        }
+
+        .message-content :global(ol) {
+          list-style-type: none;
+          counter-reset: list-counter;
+          padding-left: 20px;
+        }
+
+        .message-content :global(ul li) {
+          position: relative;
+          margin-bottom: 8px;
+          padding-left: 25px;
+          line-height: 1.6;
+        }
+
+        .message-content :global(ul li)::before {
+          content: "•";
+          color: #3498db;
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+
+        .message-content :global(ol li) {
+          position: relative;
+          margin-bottom: 8px;
+          padding-left: 25px;
+          line-height: 1.6;
+          counter-increment: list-counter;
+        }
+
+        .message-content :global(ol li)::before {
+          content: counter(list-counter) ".";
+          color: #3498db;
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+
+        .message-content :global(ul ul),
+        .message-content :global(ol ol),
+        .message-content :global(ul ol),
+        .message-content :global(ol ul) {
+          margin: 8px 0;
+          padding-left: 0;
+        }
+
+        .message-content :global(ul ul li) {
+          padding-left: 30px;
+        }
+
+        .message-content :global(ol ol li) {
+          padding-left: 30px;
+        }
+
+        .message-content :global(ul ol li),
+        .message-content :global(ol ul li) {
+          padding-left: 30px;
+        }
+
+        .message-content :global(ul ul li)::before {
+          content: "◦";
+        }
+
+        .message-content :global(ol ol li)::before {
+          content: counter(list-counter) ".";
+        }
+
+        .message-content :global(li p) {
+          margin: 0;
+        }
+
+        .message-content :global(li > ul),
+        .message-content :global(li > ol) {
+          margin-top: 8px;
+          margin-bottom: 0;
+        }
+
+        .message-content :global(a) {
+          color: #3498db;
+          text-decoration: underline;
+        }
+
+        .message-content :global(blockquote) {
+          margin: 10px 0;
+          padding: 10px 15px;
+          border-left: 4px solid #3498db;
+          background-color: #f8f9fa;
+          color: #555;
+        }
+
+        .message-content :global(code) {
+          background-color: #f0f0f0;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-family: 'Courier New', monospace;
+          font-size: 0.9em;
+        }
+
+        .message-content :global(pre) {
+          margin: 10px 0;
+          padding: 12px 15px;
+          border-radius: 5px;
+          overflow-x: auto;
+        }
+
+        .message-content :global(pre code) {
+          background: none;
+          padding: 0;
+        }
+
+        .message-content :global(table) {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 10px 0;
+        }
+
+        .message-content :global(th),
+        .message-content :global(td) {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+
+        .message-content :global(th) {
+          background-color: #f2f2f2;
+          font-weight: bold;
+        }
+
+        .message-content :global(tr:nth-child(even)) {
+          background-color: #f9f9f9;
         }
 
         .loading-indicator {
