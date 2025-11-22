@@ -11,7 +11,7 @@ const HomePage: React.FC = () => {
       <main style={styles.main}>
         <div style={styles.content}>
           <h1 style={styles.title}>欢迎使用 HuiseDesk</h1>
-          <p style={styles.description}>这是一个基于 React 的桌面应用</p>
+          <p style={styles.description}>保持松弛，保持热爱，一切都在路上</p>
           <div style={styles.linkContainer}>
             <Link to="/chat" style={styles.link}>
               Chat
