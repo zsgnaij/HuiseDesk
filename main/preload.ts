@@ -14,7 +14,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 修复：executeInMainWorld 应该接收一个对象而不是函数
 contextBridge.exposeInMainWorld("winApi", {
   openCompressorWindow: () => ipcRenderer.send("openCompressorWindow"),
 });

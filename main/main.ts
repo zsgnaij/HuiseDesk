@@ -13,21 +13,16 @@ function createMainWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "../dist/preload.cjs"), 
+      preload: path.join(__dirname, "../dist/preload.cjs"),
     },
   });
 
   mainWindow.loadURL("http://localhost:5173/");
-  // setTimeout(() => {
-  //   mainWindow.webContents.openDevTools({
-  //     mode: "detach"
-  //   })
-  // }, 2000);
 }
 
 app.whenReady().then(() => {
   createMainWindow();
-  initChannels(); 
+  initChannels();
 
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

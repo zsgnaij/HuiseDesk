@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
-// State variables for markdown libraries
+// Markdown库的状态变量
 let ReactMarkdownLib: any = null;
 let remarkGfmLib: any = null;
 let SyntaxHighlighterLib: any = null;

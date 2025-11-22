@@ -15,14 +15,14 @@ interface UploadResult {
 const ShotGridUploader: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [assetName, setAssetName] = useState<string>('');
-  const [assetType, setAssetType] = useState<string>('Prop'); // Default asset type
+  const [assetType, setAssetType] = useState<string>('Prop'); // 默认资产类型
   const [versionName, setVersionName] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Asset types for the dropdown
+  // 下拉框的资产类型选项
   const assetTypes = [
     { value: 'Prop', label: '道具 (Prop)' },
     { value: 'Character', label: '角色 (Character)' },
@@ -67,12 +67,12 @@ const ShotGridUploader: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('image', selectedFile); // Changed from 'file' to 'image' to match Multer config
+      formData.append('image', selectedFile); // 从'file'改为'image'以匹配Multer配置
       formData.append('assetName', assetName);
       formData.append('assetType', assetType);
       formData.append('versionName', versionName);
 
-      // Fixed the endpoint URL to match the backend
+      // 修复端点URL以匹配后端
       const response = await fetch('http://localhost:3000/api/upload-to-shotgrid', {
         method: 'POST',
         body: formData,
@@ -89,7 +89,7 @@ const ShotGridUploader: React.FC = () => {
         // 重置表单
         setSelectedFile(null);
         setAssetName('');
-        setAssetType('Prop'); // Reset to default
+        setAssetType('Prop'); // 重置为默认值
         setVersionName('');
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -108,7 +108,7 @@ const ShotGridUploader: React.FC = () => {
   const handleCancel = () => {
     setSelectedFile(null);
     setAssetName('');
-    setAssetType('Prop'); // Reset to default
+    setAssetType('Prop'); // 重置为默认值
     setVersionName('');
     setError('');
     setResult(null);
@@ -199,12 +199,14 @@ const ShotGridUploader: React.FC = () => {
         <button 
           onClick={handleUpload} 
           disabled={uploading}
+          className="upload-button"
         >
-          {uploading ? '上传中...' : '上传图片'}
+          {uploading ? '上传中...' : '上传到ShotGrid'}
         </button>
         <button 
           onClick={handleCancel} 
           disabled={uploading}
+          className="cancel-button"
         >
           取消
         </button>
@@ -212,174 +214,151 @@ const ShotGridUploader: React.FC = () => {
 
       <style jsx>{`
         .image-uploader {
-          padding: 20px;
-          max-width: 500px;
+          max-width: 600px;
           margin: 0 auto;
-          background: #f5f5f5;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          padding: 2rem;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        
-        h2 {
-          text-align: center;
-          color: #333;
-          margin-bottom: 20px;
-        }
-        
+
         .form-group {
-          margin-bottom: 15px;
+          margin-bottom: 1.5rem;
         }
-        
+
         label {
           display: block;
-          margin-bottom: 5px;
-          font-weight: 500;
-          color: #555;
+          margin-bottom: 0.5rem;
+          font-weight: 600;
+          color: #333;
         }
-        
-        input[type="text"] {
+
+        input, select {
           width: 100%;
-          padding: 8px 12px;
+          padding: 0.75rem;
           border: 1px solid #ddd;
           border-radius: 4px;
-          font-size: 14px;
-        }
-        
-        .asset-type-select {
-          width: 100%;
-          padding: 8px 30px 8px 12px;
-          border: 1px solid #ddd;
-          border-radius: 20px;
-          font-size: 14px;
-          background-color: #f8f9fa;
-          color: #333;
-          appearance: none;
-          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-          background-repeat: no-repeat;
-          background-position: right 10px center;
-          background-size: 14px;
-          cursor: pointer;
-          transition: all 0.2s ease;
+          font-size: 1rem;
+          transition: border-color 0.2s;
         }
 
-        .asset-type-select:hover:not(:disabled) {
-          border-color: #3498db;
-          background-color: #fff;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .asset-type-select:focus {
+        input:focus, select:focus {
           outline: none;
-          border-color: #3498db;
-          box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+          border-color: #4a90e2;
+          box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
         }
 
-        .asset-type-select:disabled {
-          opacity: 0.6;
+        input:disabled, select:disabled {
+          background-color: #f5f5f5;
           cursor: not-allowed;
         }
-        
-        input[type="file"] {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          background: white;
-        }
-        
+
         .file-info {
-          margin: 10px 0;
-          padding: 10px;
-          background: #e8f4f8;
+          background-color: #f8f9fa;
+          padding: 1rem;
           border-radius: 4px;
-          border-left: 3px solid #3498db;
+          margin-top: 0.5rem;
         }
-        
+
         .file-info p {
-          margin: 5px 0;
-          font-size: 14px;
-          color: #333;
+          margin: 0.25rem 0;
+          color: #666;
         }
-        
+
         .error-message {
-          color: #e74c3c;
-          font-size: 14px;
-          margin: 10px 0;
-          padding: 10px;
-          background: #fdedec;
+          background-color: #fee;
+          color: #c33;
+          padding: 1rem;
           border-radius: 4px;
-          border-left: 3px solid #e74c3c;
+          margin-bottom: 1rem;
+          border: 1px solid #fcc;
         }
-        
+
         .result-message {
-          margin: 10px 0;
-          padding: 15px;
+          padding: 1rem;
           border-radius: 4px;
-          font-size: 14px;
+          margin-bottom: 1rem;
         }
-        
+
         .result-message.success {
-          background: #eafaf1;
-          color: #2ecc71;
-          border-left: 3px solid #2ecc71;
+          background-color: #efe;
+          border: 1px solid #cfc;
+          color: #363;
         }
-        
+
         .result-message.error {
-          background: #fdedec;
-          color: #e74c3c;
-          border-left: 3px solid #e74c3c;
+          background-color: #fee;
+          border: 1px solid #fcc;
+          color: #c33;
         }
-        
-        .shotgrid-info {
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid #ddd;
-        }
-        
+
         .shotgrid-info p {
-          margin: 5px 0;
-          color: #27ae60;
-          font-size: 13px;
+          margin: 0.25rem 0;
+          font-weight: 500;
         }
-        
+
         .button-group {
           display: flex;
-          gap: 10px;
-          margin-top: 20px;
+          gap: 1rem;
+          margin-top: 2rem;
         }
-        
+
         button {
           flex: 1;
-          padding: 10px 20px;
+          padding: 0.75rem 1rem;
           border: none;
           border-radius: 4px;
-          font-size: 14px;
-          font-weight: 500;
+          font-size: 1rem;
+          font-weight: 600;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: background-color 0.2s;
         }
-        
-        button:first-child {
-          background: #3498db;
+
+        .upload-button {
+          background-color: #4a90e2;
           color: white;
         }
-        
-        button:first-child:hover:not(:disabled) {
-          background: #2980b9;
+
+        .upload-button:hover:not(:disabled) {
+          background-color: #3a80d2;
         }
-        
-        button:last-child {
-          background: #95a5a6;
-          color: white;
-        }
-        
-        button:last-child:hover:not(:disabled) {
-          background: #7f8c8d;
-        }
-        
-        button:disabled {
-          opacity: 0.6;
+
+        .upload-button:disabled {
+          background-color: #ccc;
           cursor: not-allowed;
+        }
+
+        .cancel-button {
+          background-color: #f5f5f5;
+          color: #333;
+          border: 1px solid #ddd;
+        }
+
+        .cancel-button:hover:not(:disabled) {
+          background-color: #e5e5e5;
+        }
+
+        .cancel-button:disabled {
+          background-color: #f5f5f5;
+          color: #999;
+          cursor: not-allowed;
+        }
+
+        .asset-type-select {
+          appearance: none;
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+          background-repeat: no-repeat;
+          background-position: right 0.75rem center;
+          background-size: 1rem;
+          padding-right: 2.5rem;
+        }
+
+        @media (max-width: 768px) {
+          .image-uploader {
+            padding: 1rem;
+          }
+
+          .button-group {
+            flex-direction: column;
+          }
         }
       `}</style>
     </div>
