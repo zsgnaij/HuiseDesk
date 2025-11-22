@@ -23,7 +23,7 @@ const HomePage: React.FC = () => {
               onClick={() => {
                 window.winApi.openCompressorWindow();
               }}
-              style={styles.link}
+              style={{ cursor: "pointer", ...styles.link }}
             >
               Compressor
             </a>

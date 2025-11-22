@@ -112,35 +112,55 @@ function startServer() {
 }
 
 /**
- * Start Electron application
+ * Start Electron application with Vite-built main process
  */
 function startElectron() {
-  console.log('🚀 Starting Electron...');
+  console.log('🚀 Starting Electron with Vite-built main process...');
   
-  const electronProcess = spawn('npx', ['electron', './main/main.js'], {
+  // 先构建主进程
+  const buildProcess = spawn('npm', ['run', 'vite:main'], {
     cwd: path.resolve(__dirname, '..'),
     shell: true,
     stdio: 'inherit'
   });
   
-  electronProcess.on('error', (err) => {
-    console.error('❌ Failed to start Electron:', err);
+  buildProcess.on('error', (err) => {
+    console.error('❌ Failed to build main process:', err);
     process.exit(1);
   });
   
-  electronProcess.on('close', (code) => {
-    console.log(`Electron exited with code ${code}`);
-    process.exit(code);
+  buildProcess.on('close', (code) => {
+    if (code !== 0) {
+      console.error('❌ Failed to build main process');
+      process.exit(1);
+    }
+    
+    // 构建成功后启动 Electron
+    const electronProcess = spawn('electron', ['--no-sandbox', './dist/main.js'], {
+      cwd: path.resolve(__dirname, '..'),
+      shell: true,
+      stdio: 'inherit'
+    });
+    
+    electronProcess.on('error', (err) => {
+      console.error('❌ Failed to start Electron:', err);
+      process.exit(1);
+    });
+    
+    electronProcess.on('close', (code) => {
+      console.log(`Electron exited with code ${code}`);
+      process.exit(code);
+    });
   });
   
-  return electronProcess;
+  return buildProcess;
 }
 
 /**
  * Main function
  */
 async function main() {
-  console.log('🔧 Starting development environment...\n');
+  console.log('🔧 Starting development environment with Vite support...\n');
   
   // Start backend server first
   const serverProcess = startServer();
