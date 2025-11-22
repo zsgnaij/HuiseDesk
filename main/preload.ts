@@ -16,4 +16,5 @@ window.addEventListener("DOMContentLoaded", () => {
 
 contextBridge.exposeInMainWorld("winApi", {
   openCompressorWindow: () => ipcRenderer.send("openCompressorWindow"),
+  openWindowByUrl: (url: string) => ipcRenderer.send("openWindowByUrl", url),
 });

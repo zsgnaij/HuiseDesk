@@ -1,6 +1,7 @@
 // renderer/types/winApiTypes.ts
 export interface WinApi {
   openCompressorWindow: () => void;
+  openWindowByUrl: (url: string) => void;
 }
 
 declare global {

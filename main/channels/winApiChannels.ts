@@ -6,6 +6,9 @@ class WinApiChannels {
     ipcMain.on("openCompressorWindow", () => {
       openWinService.openCompressorWindow();
     });
+    ipcMain.on("openWindowByUrl", (_event, url) => {
+      openWinService.openWindowByUrl(url);
+    });
   }
 }
 

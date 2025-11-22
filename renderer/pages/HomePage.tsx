@@ -27,6 +27,16 @@ const HomePage: React.FC = () => {
             >
               Compressor
             </a>
+            <a
+              onClick={() => {
+                window.winApi.openWindowByUrl(
+                  "https://krausest.github.io/js-framework-benchmark/current.html"
+                );
+              }}
+              style={{ cursor: "pointer", ...styles.link }}
+            >
+              Performance
+            </a>
           </div>
         </div>
       </main>
