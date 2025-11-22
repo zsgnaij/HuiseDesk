@@ -18,11 +18,11 @@ function createMainWindow() {
 
   // and load the index.html of the app.
   mainWindow.loadURL('http://localhost:5173/')
-  setTimeout(() => {
-    mainWindow.webContents.openDevTools({
-      mode: "detach"
-    })
-  }, 2000);
+  // setTimeout(() => {
+  //   mainWindow.webContents.openDevTools({
+  //     mode: "detach"
+  //   })
+  // }, 2000);
 }
 
 // This method will be called when Electron has finished

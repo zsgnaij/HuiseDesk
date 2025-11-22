@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import iconv from 'iconv-lite'; // 添加 iconv-lite 导入
 
 // 在ES模块中创建__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -380,38 +381,96 @@ app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => 
     cmd += ` "${assetTypeValue}"`;
     
     console.log(`执行命令: ${cmd}`);
-    const { stdout, stderr } = await execPromise(cmd);
     
-    if (stderr && stderr.trim()) {
-      console.error('Python脚本错误:', stderr);
-      // 检查stderr是否包含有用的JSON输出
-      if (stderr.trim().startsWith('{') && stderr.trim().endsWith('}')) {
+    // 在Windows环境下设置编码以避免乱码
+    const execOptions = {
+      encoding: 'buffer', // 使用buffer编码以正确处理中文
+      maxBuffer: 1024 * 1024, // 增加缓冲区大小
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8', // 设置Python IO编码
+        PYTHONLEGACYWINDOWSCONSOLE: '1' // Windows 控制台兼容性
+      }
+    };
+    
+    const { stdout, stderr } = await execPromise(cmd, execOptions);
+    
+    // 处理编码问题，使用 iconv-lite 来正确解码输出
+    let stdoutStr = '';
+    let stderrStr = '';
+    
+    if (stdout) {
+      // 尝试多种编码方式解码 stdout
+      try {
+        // 首先尝试 UTF-8
+        stdoutStr = iconv.decode(stdout, 'utf-8');
+      } catch (utf8Error) {
         try {
-          const errorResult = JSON.parse(stderr);
-          return res.json(errorResult);
-        } catch (e) {
-          // 不是有效的JSON
+          // 如果 UTF-8 失败，尝试 GBK
+          stdoutStr = iconv.decode(stdout, 'gbk');
+        } catch (gbkError) {
+          try {
+            // 如果 GBK 也失败，尝试 GB2312
+            stdoutStr = iconv.decode(stdout, 'gb2312');
+          } catch (gb2312Error) {
+            // 最后回退到默认编码
+            stdoutStr = stdout.toString();
+          }
         }
       }
+    }
+    
+    if (stderr) {
+      // 尝试多种编码方式解码 stderr
+      try {
+        // 首先尝试 UTF-8
+        stderrStr = iconv.decode(stderr, 'utf-8');
+      } catch (utf8Error) {
+        try {
+          // 如果 UTF-8 失败，尝试 GBK
+          stderrStr = iconv.decode(stderr, 'gbk');
+        } catch (gbkError) {
+          try {
+            // 如果 GBK 也失败，尝试 GB2312
+            stderrStr = iconv.decode(stderr, 'gb2312');
+          } catch (gb2312Error) {
+            // 最后回退到默认编码
+            stderrStr = stderr.toString();
+          }
+        }
+      }
+    }
+    
+    // 检查是否有错误输出
+    if (stderrStr && stderrStr.trim()) {
+      console.warn('Python脚本输出信息:', stderrStr);
     }
     
     // 解析输出结果
     let result;
     try {
-      // 尝试从stdout解析
-      result = JSON.parse(stdout.trim());
-    } catch (e) {
-      // 如果stdout解析失败，尝试从stderr解析
-      try {
-        result = JSON.parse(stderr.trim());
-      } catch (e2) {
+      // 首先尝试从stdout解析
+      if (stdoutStr && stdoutStr.trim()) {
+        result = JSON.parse(stdoutStr.trim());
+      } else if (stderrStr && stderrStr.trim()) {
+        // 如果stdout为空，尝试从stderr解析（这种情况可能发生在某些错误处理中）
+        result = JSON.parse(stderrStr.trim());
+      } else {
+        // 如果都没有输出，返回默认错误
         return res.status(500).json({
           success: false,
-          error: '解析Python脚本输出失败',
-          stdout,
-          stderr
+          error: 'Python脚本没有返回任何输出'
         });
       }
+    } catch (e) {
+      console.error('解析Python脚本输出失败:', e);
+      return res.status(500).json({
+        success: false,
+        error: '解析Python脚本输出失败',
+        stdout: stdoutStr || '',
+        stderr: stderrStr || '',
+        parseError: e.message
+      });
     }
     
     // 清理临时文件
@@ -429,7 +488,10 @@ app.post('/api/upload-to-shotgrid', upload.single('image'), async (req, res) => 
     // 清理可能的临时文件
     if (req.file) {
       try {
-        fs.unlinkSync(req.file.path);
+        const imagePath = req.file.path;
+        const imageExt = path.extname(req.file.originalname);
+        const newImagePath = `${imagePath}${imageExt}`;
+        fs.unlinkSync(newImagePath);
       } catch (e) {
         console.warn('清理临时文件失败:', e);
       }
