@@ -1,4 +1,4 @@
-import { onCLS, onFCP, onLCP, onTTFB } from "web-vitals";
+import { onCLS, onFCP, onLCP } from "web-vitals";
 import { throttle } from "lodash";
 
 export interface WebVitalsData {
@@ -29,13 +29,10 @@ export const collectWebVitals = throttle(
         case "LCP":
           vitalsData.lcp = metric;
           break;
-        case "TTFB":
-          vitalsData.ttfb = metric;
-          break;
       }
 
       // 当所有指标都收集完毕时调用回调
-      if (Object.keys(vitalsData).length === 4) {
+      if (Object.keys(vitalsData).length === 3) {
         callback(vitalsData);
       }
     };
@@ -44,7 +41,6 @@ export const collectWebVitals = throttle(
     onCLS(handleMetric);
     onFCP(handleMetric);
     onLCP(handleMetric);
-    onTTFB(handleMetric);
   },
   2000
 );
