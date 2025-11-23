@@ -290,6 +290,59 @@ app.post("/api/chat", async (req, res) => {
 });
 
 /**
+ * POST /api/chat/deepseek - 调用DeepSeek返回完整文本内容（非流式）
+ * 请求体: { prompt: string, systemPrompt?: string }
+ */
+app.post("/api/chat/deepseek", async (req, res) => {
+  try {
+    const { prompt, systemPrompt } = req.body;
+
+    // 验证请求参数
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({
+        error: "缺少必需参数 prompt 或参数类型错误",
+      });
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] [DeepSeek] 收到非流式请求: ${prompt.substring(
+        0,
+        50
+      )}...`
+    );
+
+    // 构建消息数组
+    const messages = [];
+    if (systemPrompt) {
+      messages.push(new SystemMessage(systemPrompt));
+    }
+    messages.push(new HumanMessage(prompt));
+
+    // 调用 DeepSeek API 获取完整响应
+    const response = await deepseek.invoke(messages);
+    const content = response.content || "";
+
+    console.log(
+      `[${new Date().toISOString()}] [DeepSeek] 响应完成: ${content.length} 字符`
+    );
+
+    // 返回完整响应
+    res.json({
+      success: true,
+      content: content,
+      length: content.length,
+      model: "deepseek",
+    });
+  } catch (error) {
+    console.error("[DeepSeek 错误] 请求失败:", error);
+    res.status(500).json({
+      error: "服务器内部错误",
+      message: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/models - 获取可用模型列表
  */
 app.get("/api/models", (req, res) => {
@@ -328,13 +381,17 @@ app.get("/", (req, res) => {
     name: "DeepSeek AI API Server",
     version: "1.0.0",
     endpoints: {
-      "POST /api/chat/stream": "流式返回 AI 响应 (Server-Sent Events)",
-      "POST /api/chat": "非流式返回 AI 响应",
+      "POST /api/chat/stream/deepseek": "DeepSeek流式返回 AI 响应 (Server-Sent Events)",
+      "POST /api/chat/stream/mistral": "Mistral流式返回 AI 响应 (Server-Sent Events)",
+      "POST /api/chat": "DeepSeek非流式返回 AI 响应",
+      "POST /api/chat/deepseek": "DeepSeek非流式返回 AI 响应（新接口）",
       "GET /health": "健康检查",
+      "GET /api/models": "获取可用模型列表",
+      "POST /api/upload-to-shotgrid": "上传图片到ShotGrid"
     },
     example: {
       stream: {
-        url: "/api/chat/stream",
+        url: "/api/chat/stream/deepseek",
         method: "POST",
         body: {
           prompt: "你的问题",
@@ -342,7 +399,7 @@ app.get("/", (req, res) => {
         },
       },
       chat: {
-        url: "/api/chat",
+        url: "/api/chat/deepseek",
         method: "POST",
         body: {
           prompt: "你的问题",
