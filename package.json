@@ -1,13 +1,12 @@
 {
-  "name": "monorepo",
+  "name": "husie-desktop",
   "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "private": true,
   "scripts": {
     "start": "node start.js",
-    "init:env": "yarn install:electron && yarn install:llm-server && yarn install:sg-scripts",
-    "install:electron": "cd packages/electron-app && yarn",
-    "install:llm-server": "cd packages/llm-server && yarn",
-    "install:sg-scripts": "cd packages/sg-scripts && python -m poetry install --no-root"
-  }
+    "postinstall": "cd packages/sg-scripts && python -m poetry install --no-root"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }
