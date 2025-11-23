@@ -1,9 +1,23 @@
 import React, { useState } from "react";
 import DomHugeTable from "../components/Table/DomHugeTable";
 import VirtualDomHugaTable from "../components/Table/VirtualDomHugaTable";
+import CanvasHugeTable from "../components/Table/CanvasHugeTable";
 
 const MDTPage: React.FC = () => {
-  const [selectedTable, setSelectedTable] = useState<"normal" | "virtual">("normal");
+  const [selectedTable, setSelectedTable] = useState<
+    "normal" | "virtual" | "canvas"
+  >("normal");
+
+  const renderTable = () => {
+    if (selectedTable === "normal") {
+      return <DomHugeTable />;
+    } else if (selectedTable === "virtual") {
+      return <VirtualDomHugaTable />;
+    } else if (selectedTable === "canvas") {
+      return <CanvasHugeTable />;
+    }
+    return null;
+  };
 
   return (
     <div style={styles.container}>
@@ -12,7 +26,7 @@ const MDTPage: React.FC = () => {
           <h3>大数据表格展示</h3>
           <p>展示一个包含1000行30列数据的表格组件</p>
         </div>
-        
+
         {/* 表格切换选项 */}
         <div style={styles.selectorContainer}>
           <div style={styles.selector}>
@@ -36,13 +50,21 @@ const MDTPage: React.FC = () => {
               />
               虚拟滚动表格
             </label>
+            <label style={styles.label}>
+              <input
+                type="radio"
+                value="virtual"
+                checked={selectedTable === "canvas"}
+                onChange={() => setSelectedTable("canvas")}
+                style={styles.radio}
+              />
+              Canvas表格
+            </label>
           </div>
         </div>
-        
+
         {/* 根据选择显示相应的表格 */}
-        <div style={styles.tableContainer}>
-          {selectedTable === "normal" ? <DomHugeTable /> : <VirtualDomHugaTable />}
-        </div>
+        <div style={styles.tableContainer}>{renderTable()}</div>
       </main>
     </div>
   );
@@ -85,7 +107,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   tableContainer: {
     flex: 1,
     overflow: "hidden",
-  }
+  },
 };
 
 export default MDTPage;
