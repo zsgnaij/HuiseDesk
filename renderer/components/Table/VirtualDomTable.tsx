@@ -13,7 +13,7 @@ const VirtualDomHugaTable: React.FC = () => {
 
   // 行高
   const rowHeight = 37; // 每行高度(像素)
-  const bufferRowCount = 5; // 缓冲区行数
+  const bufferRowCount = 30; // 缓冲区行数
 
   // 计算可见行
   useEffect(() => {
@@ -49,57 +49,25 @@ const VirtualDomHugaTable: React.FC = () => {
 
   // 处理滚动事件
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    setScrollTop(e.currentTarget?.scrollTop || 0);
   };
 
   return (
-    <div
-      style={{ height: "100%", padding: "20px", backgroundColor: "#f8f9fa" }}
-    >
+    <div style={styles.container}>
       <div
         ref={containerRef}
-        style={{
-          height: "calc(100vh - 80px)",
-          overflow: "auto",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-        }}
+        style={styles.tableWrapper}
         onScroll={handleScroll}
       >
-        <div
-          style={{ height: tableData.length * rowHeight, position: "relative" }}
+        <div style={{ ...styles.tableContainer, height: tableData.length * rowHeight }}
         >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              backgroundColor: "white",
-              minWidth: "100%",
-              tableLayout: "fixed",
-            }}
+          <table style={styles.table}
           >
-            <thead
-              style={{
-                position: "sticky",
-                top: 0,
-                zIndex: 10,
-                backgroundColor: "white",
-              }}
+            <thead style={styles.thead}
             >
               <tr>
                 {tableCols.map((col) => (
-                  <th
-                    key={col}
-                    style={{
-                      backgroundColor: "#4a90e2",
-                      color: "white",
-                      fontWeight: 600,
-                      padding: "12px 15px",
-                      textAlign: "left",
-                      fontSize: "14px",
-                      position: "relative",
-                      whiteSpace: "nowrap",
-                    }}
+                  <th key={col} style={styles.th}
                   >
                     Column {col}
                   </th>
@@ -111,25 +79,15 @@ const VirtualDomHugaTable: React.FC = () => {
                 <tr
                   key={row}
                   style={{
-                    backgroundColor: index % 2 === 0 ? "#f8f9fa" : "white",
-                    transition: "background-color 0.2s ease",
+                    ...styles.tr,
+                    ...(index % 2 === 0 ? styles.evenRow : styles.oddRow),
                     position: "absolute",
                     top: index * rowHeight,
                     width: "100%",
                   }}
                 >
                   {tableCols.map((col) => (
-                    <td
-                      key={col}
-                      style={{
-                        padding: "10px 15px",
-                        borderBottom: "1px solid #eee",
-                        fontSize: "13px",
-                        color: "#333",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
+                    <td key={col} style={styles.td}
                     >
                       Row {row}, Column {col}
                     </td>
@@ -140,27 +98,66 @@ const VirtualDomHugaTable: React.FC = () => {
           </table>
         </div>
       </div>
-      <style>{`
-        div[ref]::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        
-        div[ref]::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        
-        div[ref]::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 4px;
-        }
-        
-        div[ref]::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-      `}</style>
+
     </div>
   );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+  container: {
+    height: "100%",
+    padding: "20px",
+    backgroundColor: "#f8f9fa",
+    position: "relative",
+  },
+  tableWrapper: {
+    height: "calc(100vh - 180px)",
+    maxHeight: "calc(100vh - 180px)",
+    overflow: "auto",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+  },
+  tableContainer: {
+    height: 1000 * 37, // This will be overridden inline with tableData.length * rowHeight
+    position: "relative",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    backgroundColor: "white",
+  },
+  thead: {
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+  },
+  th: {
+    backgroundColor: "#4a90e2",
+    color: "white",
+    fontWeight: 600,
+    padding: "12px 15px",
+    textAlign: "left",
+    fontSize: "14px",
+    position: "relative",
+    minWidth: "120px",
+  },
+  tr: {
+    transition: "background-color 0.2s ease",
+  },
+  evenRow: {
+    backgroundColor: "#f8f9fa",
+  },
+  oddRow: {
+    backgroundColor: "white",
+  },
+  td: {
+    padding: "10px 15px",
+    borderBottom: "1px solid #eee",
+    fontSize: "13px",
+    color: "#333",
+    whiteSpace: "nowrap",
+    minWidth: "120px",
+  },
 };
 
 export default VirtualDomHugaTable;

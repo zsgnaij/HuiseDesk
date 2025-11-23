@@ -185,7 +185,8 @@ const CanvasHugeTable: React.FC = () => {
       <div
         ref={containerRef}
         style={{
-          height: "100%",
+          height: "calc(100vh - 180px)",
+          maxHeight: "calc(100vh - 180px)",
           overflow: "auto",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",

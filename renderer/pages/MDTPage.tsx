@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import DomHugeTable from "../components/Table/DomHugeTable";
-import VirtualDomHugaTable from "../components/Table/VirtualDomHugaTable";
-import CanvasHugeTable from "../components/Table/CanvasHugeTable";
+import DomHugeTable from "../components/Table/DomTable";
+import VirtualDomHugaTable from "../components/Table/VirtualDomTable";
+import CanvasHugeTable from "../components/Table/CanvasTable";
 
 const MDTPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<
@@ -53,7 +53,7 @@ const MDTPage: React.FC = () => {
             <label style={styles.label}>
               <input
                 type="radio"
-                value="virtual"
+                value="canvas"
                 checked={selectedTable === "canvas"}
                 onChange={() => setSelectedTable("canvas")}
                 style={styles.radio}
@@ -106,7 +106,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   tableContainer: {
     flex: 1,
-    overflow: "hidden",
+    overflow: "auto",
+    height: "calc(100% - 120px)",
   },
 };
 
