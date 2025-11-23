@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import DomTable from "../components/Table/DomTable";
 import VirtualDomTable from "../components/Table/VirtualDomTable";
 import CanvasTable from "../components/Table/CanvasTable";
+import VirtualCanvasTable from "../components/Table/VirtualCanvasTable";
 
 const MDTPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<
-    "normal" | "virtual" | "canvas"
+    "normal" | "virtual" | "canvas" | "virtualCanvas"
   >("normal");
 
   const renderTable = () => {
@@ -15,6 +16,8 @@ const MDTPage: React.FC = () => {
       return <VirtualDomTable />;
     } else if (selectedTable === "canvas") {
       return <CanvasTable />;
+    } else if (selectedTable === "virtualCanvas") {
+      return <VirtualCanvasTable />;
     }
     return null;
   };
@@ -59,6 +62,16 @@ const MDTPage: React.FC = () => {
                 style={styles.radio}
               />
               Canvas表格
+            </label>
+            <label style={styles.label}>
+              <input
+                type="radio"
+                value="virtualCanvas"
+                checked={selectedTable === "virtualCanvas"}
+                onChange={() => setSelectedTable("virtualCanvas")}
+                style={styles.radio}
+              />
+              Canvas虚拟滚动表格
             </label>
           </div>
         </div>
