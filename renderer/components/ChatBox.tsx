@@ -418,7 +418,7 @@ const ChatBox: React.FC = () => {
           background-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
-          min-width: 120px;
+          min-width: 160px;
           text-align-last: center;
         }
 

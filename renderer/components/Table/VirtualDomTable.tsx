@@ -10,10 +10,21 @@ const VirtualDomTable: React.FC = () => {
   >([]);
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLTableSectionElement>(null);
+  const fixedHeaderRef = useRef<HTMLTableSectionElement>(null);
 
-  // 行高
+  // 行高和表头高度
   const rowHeight = 37; // 每行高度(像素)
   const bufferRowCount = 30; // 缓冲区行数
+  const [headerHeight, setHeaderHeight] = useState(0); // 表头高度
+
+  // 计算表头高度
+  useEffect(() => {
+    if (fixedHeaderRef.current) {
+      const height = fixedHeaderRef.current.offsetHeight;
+      setHeaderHeight(height);
+    }
+  }, []);
 
   // 计算可见行
   useEffect(() => {
@@ -45,7 +56,7 @@ const VirtualDomTable: React.FC = () => {
     }
 
     setVisibleRows(newVisibleRows);
-  }, [scrollTop]);
+  }, [scrollTop, headerHeight]);
 
   // 处理滚动事件
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -54,51 +65,59 @@ const VirtualDomTable: React.FC = () => {
 
   return (
     <div style={styles.container}>
-      <div
-        ref={containerRef}
-        style={styles.tableWrapper}
-        onScroll={handleScroll}
-      >
-        <div style={{ ...styles.tableContainer, height: tableData.length * rowHeight }}
+      <div style={styles.tableWrapper}>
+        <div 
+          ref={containerRef}
+          style={styles.scrollContainer}
+          onScroll={handleScroll}
         >
-          <table style={styles.table}
-          >
-            <thead style={styles.thead}
-            >
-              <tr>
-                {tableCols.map((col) => (
-                  <th key={col} style={styles.th}
-                  >
-                    Column {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map(({ index, data: row }) => (
-                <tr
-                  key={row}
-                  style={{
-                    ...styles.tr,
-                    ...(index % 2 === 0 ? styles.evenRow : styles.oddRow),
-                    position: "absolute",
-                    top: index * rowHeight,
-                    width: "100%",
-                  }}
-                >
+          <div style={{ ...styles.tableContainer, height: headerHeight + tableData.length * rowHeight }}>
+            <table style={styles.table}>
+              <thead style={styles.thead}>
+                <tr>
                   {tableCols.map((col) => (
-                    <td key={col} style={styles.td}
-                    >
-                      Row {row}, Column {col}
-                    </td>
+                    <th key={col} style={styles.th}>
+                      Column {col}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleRows.map(({ index, data: row }) => (
+                  <tr
+                    key={row}
+                    style={{
+                      ...styles.tr,
+                      ...(index % 2 === 0 ? styles.evenRow : styles.oddRow),
+                      position: "absolute",
+                      top: headerHeight + index * rowHeight, // 加上表头高度
+                      width: "100%",
+                    }}
+                  >
+                    {tableCols.map((col) => (
+                      <td key={col} style={styles.td}>
+                        Row {row}, Column {col}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+        {/* 固定表头覆盖层 */}
+        <table style={{ ...styles.table, ...styles.fixedHeaderTable }}>
+          <thead ref={fixedHeaderRef} style={styles.thead}>
+            <tr>
+              {tableCols.map((col) => (
+                <th key={col} style={styles.th}>
+                  Column {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        </table>
       </div>
-
     </div>
   );
 };
@@ -113,12 +132,16 @@ const styles: { [key: string]: React.CSSProperties } = {
   tableWrapper: {
     height: "calc(100vh - 180px)",
     maxHeight: "calc(100vh - 180px)",
-    overflow: "auto",
     borderRadius: "8px",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+    position: "relative",
+    overflow: "hidden",
+  },
+  scrollContainer: {
+    height: "100%",
+    overflow: "auto",
   },
   tableContainer: {
-    height: 1000 * 37, // This will be overridden inline with tableData.length * rowHeight
     position: "relative",
   },
   table: {
@@ -126,10 +149,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderCollapse: "collapse",
     backgroundColor: "white",
   },
-  thead: {
-    position: "sticky",
+  fixedHeaderTable: {
+    position: "absolute",
     top: 0,
-    zIndex: 10,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    backgroundColor: "white",
+  },
+  thead: {
+    backgroundColor: "white",
   },
   th: {
     backgroundColor: "#4a90e2",
@@ -139,7 +168,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: "left",
     fontSize: "14px",
     position: "relative",
-    minWidth: "120px",
+    minWidth: "160px",
   },
   tr: {
     transition: "background-color 0.2s ease",
@@ -156,7 +185,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: "13px",
     color: "#333",
     whiteSpace: "nowrap",
-    minWidth: "120px",
+    minWidth: "160px",
   },
 };
 

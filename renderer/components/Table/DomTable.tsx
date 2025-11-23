@@ -109,7 +109,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: "left",
     fontSize: "14px",
     position: "relative",
-    minWidth: "120px",
+    minWidth: "160px",
   },
   tr: {
     transition: "background-color 0.2s ease",
@@ -129,7 +129,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: "13px",
     color: "#333",
     whiteSpace: "nowrap",
-    minWidth: "120px",
+    minWidth: "160px",
   },
 };
 

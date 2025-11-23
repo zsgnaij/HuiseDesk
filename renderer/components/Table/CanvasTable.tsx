@@ -11,7 +11,7 @@ const CanvasTable: React.FC = () => {
 
   // 表格样式配置
   const config = {
-    cellWidth: 120,
+    cellWidth: 160,
     cellHeight: 37,
     headerHeight: 40,
     headerBgColor: "#4a90e2",
