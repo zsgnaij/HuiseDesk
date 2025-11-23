@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import DomHugeTable from "../components/Table/DomTable";
-import VirtualDomHugaTable from "../components/Table/VirtualDomTable";
-import CanvasHugeTable from "../components/Table/CanvasTable";
+import DomTable from "../components/Table/DomTable";
+import VirtualDomTable from "../components/Table/VirtualDomTable";
+import CanvasTable from "../components/Table/CanvasTable";
 
 const MDTPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<
@@ -10,11 +10,11 @@ const MDTPage: React.FC = () => {
 
   const renderTable = () => {
     if (selectedTable === "normal") {
-      return <DomHugeTable />;
+      return <DomTable />;
     } else if (selectedTable === "virtual") {
-      return <VirtualDomHugaTable />;
+      return <VirtualDomTable />;
     } else if (selectedTable === "canvas") {
-      return <CanvasHugeTable />;
+      return <CanvasTable />;
     }
     return null;
   };

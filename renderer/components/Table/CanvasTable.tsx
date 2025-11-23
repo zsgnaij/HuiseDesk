@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 
-const CanvasHugeTable: React.FC = () => {
+const CanvasTable: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 });
@@ -209,4 +209,4 @@ const CanvasHugeTable: React.FC = () => {
   );
 };
 
-export default CanvasHugeTable;
+export default CanvasTable;

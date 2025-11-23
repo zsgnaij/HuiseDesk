@@ -1,6 +1,6 @@
 import React from "react";
 
-const DomHugeTable: React.FC = () => {
+const DomTable: React.FC = () => {
   const tableCols = Array.from({ length: 30 }, (_, i) => i + 1);
   const tableData = Array.from({ length: 1000 }, (_, i) => i + 1);
   
@@ -133,4 +133,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-export default DomHugeTable;
+export default DomTable;

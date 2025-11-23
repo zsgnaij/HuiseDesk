@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const VirtualDomHugaTable: React.FC = () => {
+const VirtualDomTable: React.FC = () => {
   const tableCols = Array.from({ length: 30 }, (_, i) => i + 1);
   const tableData = Array.from({ length: 1000 }, (_, i) => i + 1);
 
@@ -160,4 +160,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-export default VirtualDomHugaTable;
+export default VirtualDomTable;
