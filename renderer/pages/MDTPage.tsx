@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import DomHugeTable from "../components/DomHugeTable";
-import VirtualDomHugaTable from "../components/VirtualDomHugaTable";
+import DomHugeTable from "../components/Table/DomHugeTable";
+import VirtualDomHugaTable from "../components/Table/VirtualDomHugaTable";
 
 const MDTPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<"normal" | "virtual">("normal");

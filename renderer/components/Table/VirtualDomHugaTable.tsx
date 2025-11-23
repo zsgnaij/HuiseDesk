@@ -52,7 +52,7 @@ const VirtualDomHugaTable: React.FC = () => {
       <div 
         ref={containerRef}
         style={{ 
-          height: "400px", 
+          height: "100%", 
           overflow: "auto",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)"
