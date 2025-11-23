@@ -1,0 +1,44 @@
+{
+  "name": "qy-langchain",
+  "version": "1.0.0",
+  "description": "A minimal Electron application",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.cjs",
+    "vite": "vite --config scripts/vite.renderer.config.js",
+    "vite:main": "vite build --config scripts/vite.main.config.js",
+    "server": "node server/app.js",
+    "client-example": "node server/client-example.js",
+    "test-server": "node server/test-server.js"
+  },
+  "repository": "https://github.com/zsgnaij/qylangChain",
+  "keywords": [
+    "Electron",
+    "quick",
+    "start",
+    "tutorial",
+    "demo"
+  ],
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
+  },
+  "dependencies": {
+    "electron": "38.6.0",
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "node-fetch": "^3.3.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.6",
+    "react-syntax-highlighter": "^16.1.0",
+    "remark-gfm": "^4.0.1"
+  }
+}

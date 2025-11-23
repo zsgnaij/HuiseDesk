@@ -4,8 +4,6 @@ const net = require('net');
 
 const VITE_PORT = 5173;
 const VITE_HOST = 'localhost';
-const SERVER_PORT = 3000;
-const SERVER_HOST = 'localhost';
 
 /**
  * Check if a port is in use
@@ -53,25 +51,6 @@ async function waitForVite(maxRetries = 30) {
 }
 
 /**
- * Wait for server to be ready
- */
-async function waitForServer(maxRetries = 30) {
-  console.log('⏳ Waiting for backend server to start...');
-  
-  for (let i = 0; i < maxRetries; i++) {
-    const isReady = await checkPort(SERVER_PORT, SERVER_HOST);
-    if (isReady) {
-      console.log('✅ Backend server is ready!');
-      return true;
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-  
-  console.error('❌ Backend server failed to start within timeout');
-  return false;
-}
-
-/**
  * Start Vite dev server
  */
 function startVite() {
@@ -89,26 +68,6 @@ function startVite() {
   });
   
   return viteProcess;
-}
-
-/**
- * Start backend server
- */
-function startServer() {
-  console.log('🚀 Starting backend server...');
-  
-  const serverProcess = spawn('npm', ['run', 'server'], {
-    cwd: path.resolve(__dirname, '..'),
-    shell: true,
-    stdio: 'inherit'
-  });
-  
-  serverProcess.on('error', (err) => {
-    console.error('❌ Failed to start backend server:', err);
-    process.exit(1);
-  });
-  
-  return serverProcess;
 }
 
 /**
@@ -162,17 +121,6 @@ function startElectron() {
 async function main() {
   console.log('🔧 Starting development environment with Vite support...\n');
   
-  // Start backend server first
-  const serverProcess = startServer();
-  
-  // Wait for server to be ready
-  const serverReady = await waitForServer();
-  
-  if (!serverReady) {
-    serverProcess.kill();
-    process.exit(1);
-  }
-  
   // Start Vite dev server
   const viteProcess = startVite();
   
@@ -181,7 +129,6 @@ async function main() {
   
   if (!viteReady) {
     viteProcess.kill();
-    serverProcess.kill();
     process.exit(1);
   }
   
@@ -192,7 +139,6 @@ async function main() {
   process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down...');
     viteProcess.kill();
-    serverProcess.kill();
     electronProcess.kill();
     process.exit(0);
   });
@@ -200,7 +146,6 @@ async function main() {
   process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down...');
     viteProcess.kill();
-    serverProcess.kill();
     electronProcess.kill();
     process.exit(0);
   });

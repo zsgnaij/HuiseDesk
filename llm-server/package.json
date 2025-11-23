@@ -1,0 +1,19 @@
+{
+  "name": "llm-server",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "serve": "node src/app.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.0.3",
+    "@langchain/deepseek": "^1.0.0",
+    "@langchain/mistralai": "^1.0.0",
+    "cors": "^2.8.5",
+    "langchain": "^1.0.3",
+    "openai": "^6.8.1",
+    "express": "^5.1.0",
+    "iconv-lite": "^0.7.0",
+    "multer": "^2.0.2"
+  }
+}

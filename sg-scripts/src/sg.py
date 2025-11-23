@@ -1,5 +1,4 @@
 from shotgun_api3 import Shotgun
-import requests
 import os
 import json
 import sys
