@@ -10,12 +10,11 @@ const VirtualDomTable: React.FC = () => {
   >([]);
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLTableSectionElement>(null);
   const fixedHeaderRef = useRef<HTMLTableSectionElement>(null);
 
   // 行高和表头高度
   const rowHeight = 37; // 每行高度(像素)
-  const bufferRowCount = 30; // 缓冲区行数
+  const bufferRowCount = 10; // 缓冲区行数
   const [headerHeight, setHeaderHeight] = useState(0); // 表头高度
 
   // 计算表头高度
