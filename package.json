@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node start.js",
     "init:env": "yarn install:electron && yarn install:llm-server && yarn install:sg-scripts",
-    "install:electron": "cd electron-app && yarn",
-    "install:llm-server": "cd llm-server && yarn",
-    "install:sg-scripts": "cd sg-scripts && python -m poetry install --no-root"
+    "install:electron": "cd packages/electron-app && yarn",
+    "install:llm-server": "cd packages/llm-server && yarn",
+    "install:sg-scripts": "cd packages/sg-scripts && python -m poetry install --no-root"
   }
 }
