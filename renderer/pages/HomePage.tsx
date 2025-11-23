@@ -37,6 +37,16 @@ const HomePage: React.FC = () => {
             >
               Performance
             </a>
+            <a
+              onClick={() => {
+                window.winApi.openWindowByUrl(
+                  "http://localhost:5173/mdt"
+                );
+              }}
+              style={{ cursor: "pointer", ...styles.link }}
+            >
+              MDT
+            </a>
           </div>
         </div>
       </main>
