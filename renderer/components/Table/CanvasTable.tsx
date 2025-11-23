@@ -14,7 +14,7 @@ const CanvasTable: React.FC = () => {
   const config = {
     cellWidth: 160, // 同步DomTable的minWidth
     cellHeight: 37, // 同步DomTable的行高
-    headerHeight: 41, // 表头高度
+    headerHeight: 44, // 表头高度
     headerBgColor: "#4a90e2", // 同步DomTable表头背景色
     headerTextColor: "#ffffff", // 同步DomTable表头文字颜色
     evenRowBgColor: "#f8f9fa", // 同步DomTable偶数行背景色

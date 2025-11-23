@@ -15,7 +15,7 @@ const VirtualCanvasTable: React.FC = () => {
   const config = {
     cellWidth: 160,
     cellHeight: 37,
-    headerHeight: 41,
+    headerHeight: 44,
     headerBg: "#4a90e2",
     headerColor: "#fff",
     evenBg: "#f8f9fa",
@@ -213,15 +213,19 @@ const VirtualCanvasTable: React.FC = () => {
           background: "white",
           pointerEvents: "none",
           display: "block",
+          borderTopLeftRadius: "8px",
+          borderTopRightRadius: "8px",
         }}
       />
       <div
         ref={containerRef}
         style={{
           height: "calc(100vh - 180px)",
+          maxHeight: "calc(100vh - 180px)",
           overflow: "auto",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+          backgroundColor: "white",
           position: "relative",
-          background: "white",
         }}
       >
         <div style={{ width: totalWidth, height: totalHeight }} />
@@ -230,7 +234,7 @@ const VirtualCanvasTable: React.FC = () => {
         ref={contentRef}
         style={{
           position: "absolute",
-          top: 41,
+          top: 44,
           left: 0,
           display: "block",
           width: "100%",
