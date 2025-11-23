@@ -3,7 +3,6 @@ import DomTable from "../components/Table/DomTable";
 import VirtualDomTable from "../components/Table/VirtualDomTable";
 import CanvasTable from "../components/Table/CanvasTable";
 import VirtualCanvasTable from "../components/Table/VirtualCanvasTable";
-import { collectWebVitals, WebVitalsData } from "../utils/webVitalsCollector";
 import { analyzeWebVitalsWithLLM } from "../utils/llmAnalyzer";
 import { Drawer, Button, Spin } from "antd";
 import ReactMarkdown from "react-markdown";
@@ -13,6 +12,7 @@ const MDTPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<
     "normal" | "virtual" | "canvas" | "virtualCanvas"
   >("normal");
+
   const [llmAnalysis, setLlmAnalysis] = useState<string>("");
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(false);
 
@@ -22,27 +22,34 @@ const MDTPage: React.FC = () => {
   // 用于防止重复分析的ref
   const analyzeTriggered = useRef(false);
 
-  // 初始化web-vitals采集和分析
+  // 初始化性能数据采集和分析
   useEffect(() => {
-    collectWebVitals(async (data: WebVitalsData) => {
-      // 只有在未触发过分析时才进行分析
-      if (!analyzeTriggered.current) {
-        console.log("[Web Vitals] Collected data:", data);
+    // 只有在未触发过分析时才进行分析
+    if (!analyzeTriggered.current) {
+      setTimeout(() => {
+        console.log("[Performance] Collected data:", window.performance);
         // 页面加载时就进行分析
-        analyzePerformance(data);
-        // 标记已触发分析
-        analyzeTriggered.current = true;
-      }
-    });
+        analyzePerformance(window.performance);
+      }, 5_000);
+      // 标记已触发分析
+      analyzeTriggered.current = true;
+    }
   }, []);
 
   // 性能分析函数
-  const analyzePerformance = async (data: WebVitalsData) => {
+  const analyzePerformance = async (performanceData: any) => {
     setIsAnalysisLoading(true);
     try {
-      const analysisResult = await analyzeWebVitalsWithLLM(data);
+      // 提取关键性能指标
+      const perfData = {
+        navigation: performanceData.navigation,
+        timing: performanceData.timing,
+        memory: (performanceData as any).memory,
+        paint: performanceData.getEntriesByType("paint"),
+      };
+      console.log("[Performance] Extracted performance data:", perfData);
+      const analysisResult = await analyzeWebVitalsWithLLM(perfData);
       setLlmAnalysis(analysisResult);
-      console.log("[Web Vitals] LLM Analysis:", analysisResult);
     } catch (error) {
       console.error("性能分析失败:", error);
     } finally {
@@ -150,7 +157,10 @@ const MDTPage: React.FC = () => {
       >
         {llmAnalysis ? (
           <div style={styles.markdownContainer}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
               {llmAnalysis}
             </ReactMarkdown>
           </div>
@@ -213,26 +223,135 @@ const styles: { [key: string]: React.CSSProperties } = {
     lineHeight: "1.6",
     color: "#333",
     padding: "16px",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   },
 };
 
 // 添加Markdown组件的内联样式
 const markdownComponents = {
-  h1: ({ node, ...props }: any) => <h1 style={{ fontSize: "24px", fontWeight: "bold", marginTop: "24px", marginBottom: "16px", borderBottom: "1px solid #eaecef", paddingBottom: "8px" }} {...props} />,
-  h2: ({ node, ...props }: any) => <h2 style={{ fontSize: "20px", fontWeight: "bold", marginTop: "20px", marginBottom: "12px", borderBottom: "1px solid #eaecef", paddingBottom: "6px" }} {...props} />,
-  h3: ({ node, ...props }: any) => <h3 style={{ fontSize: "18px", fontWeight: "bold", marginTop: "16px", marginBottom: "10px" }} {...props} />,
-  h4: ({ node, ...props }: any) => <h4 style={{ fontSize: "16px", fontWeight: "bold", marginTop: "14px", marginBottom: "8px" }} {...props} />,
-  h5: ({ node, ...props }: any) => <h5 style={{ fontSize: "14px", fontWeight: "bold", marginTop: "12px", marginBottom: "6px" }} {...props} />,
-  h6: ({ node, ...props }: any) => <h6 style={{ fontSize: "12px", fontWeight: "bold", marginTop: "12px", marginBottom: "6px", color: "#777" }} {...props} />,
-  p: ({ node, ...props }: any) => <p style={{ margin: "8px 0", lineHeight: "1.6" }} {...props} />,
-  a: ({ node, ...props }: any) => <a style={{ color: "#0366d6", textDecoration: "none" }} {...props} />,
-  ul: ({ node, ...props }: any) => <ul style={{ paddingLeft: "24px", margin: "8px 0" }} {...props} />,
-  ol: ({ node, ...props }: any) => <ol style={{ paddingLeft: "24px", margin: "8px 0" }} {...props} />,
-  li: ({ node, ...props }: any) => <li style={{ margin: "4px 0" }} {...props} />,
-  blockquote: ({ node, ...props }: any) => <blockquote style={{ margin: "16px 0", padding: "0 16px", borderLeft: "4px solid #dfe2e5", color: "#6a737d" }} {...props} />,
-  code: ({ node, ...props }: any) => <code style={{ padding: "2px 4px", backgroundColor: "#f6f8fa", borderRadius: "3px", fontFamily: "monospace", fontSize: "12px" }} {...props} />,
-  pre: ({ node, ...props }: any) => <pre style={{ padding: "16px", backgroundColor: "#f6f8fa", borderRadius: "3px", overflow: "auto", fontFamily: "monospace", fontSize: "12px" }} {...props} />,
+  h1: ({ node, ...props }: any) => (
+    <h1
+      style={{
+        fontSize: "24px",
+        fontWeight: "bold",
+        marginTop: "24px",
+        marginBottom: "16px",
+        borderBottom: "1px solid #eaecef",
+        paddingBottom: "8px",
+      }}
+      {...props}
+    />
+  ),
+  h2: ({ node, ...props }: any) => (
+    <h2
+      style={{
+        fontSize: "20px",
+        fontWeight: "bold",
+        marginTop: "20px",
+        marginBottom: "12px",
+        borderBottom: "1px solid #eaecef",
+        paddingBottom: "6px",
+      }}
+      {...props}
+    />
+  ),
+  h3: ({ node, ...props }: any) => (
+    <h3
+      style={{
+        fontSize: "18px",
+        fontWeight: "bold",
+        marginTop: "16px",
+        marginBottom: "10px",
+      }}
+      {...props}
+    />
+  ),
+  h4: ({ node, ...props }: any) => (
+    <h4
+      style={{
+        fontSize: "16px",
+        fontWeight: "bold",
+        marginTop: "14px",
+        marginBottom: "8px",
+      }}
+      {...props}
+    />
+  ),
+  h5: ({ node, ...props }: any) => (
+    <h5
+      style={{
+        fontSize: "14px",
+        fontWeight: "bold",
+        marginTop: "12px",
+        marginBottom: "6px",
+      }}
+      {...props}
+    />
+  ),
+  h6: ({ node, ...props }: any) => (
+    <h6
+      style={{
+        fontSize: "12px",
+        fontWeight: "bold",
+        marginTop: "12px",
+        marginBottom: "6px",
+        color: "#777",
+      }}
+      {...props}
+    />
+  ),
+  p: ({ node, ...props }: any) => (
+    <p style={{ margin: "8px 0", lineHeight: "1.6" }} {...props} />
+  ),
+  a: ({ node, ...props }: any) => (
+    <a style={{ color: "#0366d6", textDecoration: "none" }} {...props} />
+  ),
+  ul: ({ node, ...props }: any) => (
+    <ul style={{ paddingLeft: "24px", margin: "8px 0" }} {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol style={{ paddingLeft: "24px", margin: "8px 0" }} {...props} />
+  ),
+  li: ({ node, ...props }: any) => (
+    <li style={{ margin: "4px 0" }} {...props} />
+  ),
+  blockquote: ({ node, ...props }: any) => (
+    <blockquote
+      style={{
+        margin: "16px 0",
+        padding: "0 16px",
+        borderLeft: "4px solid #dfe2e5",
+        color: "#6a737d",
+      }}
+      {...props}
+    />
+  ),
+  code: ({ node, ...props }: any) => (
+    <code
+      style={{
+        padding: "2px 4px",
+        backgroundColor: "#f6f8fa",
+        borderRadius: "3px",
+        fontFamily: "monospace",
+        fontSize: "12px",
+      }}
+      {...props}
+    />
+  ),
+  pre: ({ node, ...props }: any) => (
+    <pre
+      style={{
+        padding: "16px",
+        backgroundColor: "#f6f8fa",
+        borderRadius: "3px",
+        overflow: "auto",
+        fontFamily: "monospace",
+        fontSize: "12px",
+      }}
+      {...props}
+    />
+  ),
 };
 
 export default MDTPage;

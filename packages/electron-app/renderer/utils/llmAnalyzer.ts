@@ -1,17 +1,15 @@
-import { WebVitalsData } from './webVitalsCollector';
-
 /**
- * 调用大模型接口分析Web Vitals数据
- * @param webVitalsData Web Vitals指标数据
+ * 调用大模型接口分析Performance数据
+ * @param performanceData Performance API数据
  * @returns 分析结果的Promise
  */
-export const analyzeWebVitalsWithLLM = async (webVitalsData: WebVitalsData): Promise<string> => {
+export const analyzeWebVitalsWithLLM = async (performanceData: any): Promise<string> => {
   try {
     const prompt = `
-请分析以下Web Vitals性能指标数据：
+请分析以下Performance API性能数据：
 
 指标数据：
-${JSON.stringify(webVitalsData, null, 2)}
+${JSON.stringify(performanceData, null, 2)}
 
 请根据这些数据提供性能分析和优化建议，请用中文回答。
 `;
@@ -36,17 +34,18 @@ ${JSON.stringify(webVitalsData, null, 2)}
   } catch (error) {
     console.error('LLM分析失败:', error);
     // 使用模拟分析结果作为备选
-    return `基于采集的Web Vitals指标分析：
+    return `基于采集的Performance API指标分析：
 
-CLS (累积布局偏移): ${webVitalsData.cls?.value?.toFixed(4) || 'N/A'}
-FCP (首次内容绘制): ${webVitalsData.fcp?.value?.toFixed(2) || 'N/A'} ms
-LCP (最大内容绘制): ${webVitalsData.lcp?.value?.toFixed(2) || 'N/A'} ms
-TTFB (首字节时间): ${webVitalsData.ttfb?.value?.toFixed(2) || 'N/A'} ms
+Navigation Timing: ${performanceData.navigation ? 'Available' : 'N/A'}
+Timing Data: ${performanceData.timing ? 'Available' : 'N/A'}
+Memory Info: ${performanceData.memory ? 'Available' : 'N/A'}
+Paint Entries: ${performanceData.paint ? performanceData.paint.length : 0} items
+Performance Entries: ${performanceData.entries ? performanceData.entries.length : 0} items
 
 优化建议：
-1. 如果LCP值较高，考虑优化图片加载和代码分割
-2. 如果CLS值较高，检查是否有动态内容插入导致布局偏移
-3. 如果FCP值较高，优化关键渲染路径
-4. 如果TTFB值较高，考虑使用CDN或优化服务器响应`;
+1. 检查页面加载时间，优化关键资源加载
+2. 分析首屏渲染时间，优化关键渲染路径
+3. 检查内存使用情况，避免内存泄漏
+4. 优化资源加载顺序和并行度`;
   }
 };

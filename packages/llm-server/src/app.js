@@ -304,13 +304,6 @@ app.post("/api/chat/deepseek", async (req, res) => {
       });
     }
 
-    console.log(
-      `[${new Date().toISOString()}] [DeepSeek] 收到非流式请求: ${prompt.substring(
-        0,
-        50
-      )}...`
-    );
-
     // 构建消息数组
     const messages = [];
     if (systemPrompt) {
