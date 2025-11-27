@@ -358,6 +358,15 @@ const MultiDimensionalTable: React.FC = () => {
       <canvas
         ref={contentRef}
         onDoubleClick={handleCanvasClick}
+        onWheel={(e) => {
+          // 阻止事件冒泡，让滚轮事件传递到容器
+          e.stopPropagation();
+          // 将滚轮事件传递给容器
+          if (containerRef.current) {
+            containerRef.current.scrollTop += e.deltaY;
+            containerRef.current.scrollLeft += e.deltaX;
+          }
+        }}
         style={{
           position: "absolute",
           top: config.headerHeight + 20, // 添加 config.headerHeight 偏移
