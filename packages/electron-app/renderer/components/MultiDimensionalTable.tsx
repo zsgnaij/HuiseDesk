@@ -11,7 +11,7 @@ interface CellData {
   [key: string]: string;
 }
 
-const VirtualCanvasTable: React.FC = () => {
+const MultiDimensionalTable: React.FC = () => {
   const contentRef = useRef<HTMLCanvasElement | null>(null);
   const headerRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -409,4 +409,4 @@ const VirtualCanvasTable: React.FC = () => {
   );
 };
 
-export default VirtualCanvasTable;
+export default MultiDimensionalTable;
