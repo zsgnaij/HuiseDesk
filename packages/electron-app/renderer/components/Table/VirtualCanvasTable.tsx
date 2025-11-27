@@ -1,4 +1,15 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
+
+// 定义单元格位置类型
+interface CellPosition {
+  row: number;
+  col: number;
+}
+
+// 定义单元格数据类型
+interface CellData {
+  [key: string]: string;
+}
 
 const VirtualCanvasTable: React.FC = () => {
   const contentRef = useRef<HTMLCanvasElement | null>(null);
@@ -8,9 +19,17 @@ const VirtualCanvasTable: React.FC = () => {
   const viewportRef = useRef({ width: 0, height: 0 });
   const rafRef = useRef<number | null>(null);
 
+  // 编辑状态相关
+  const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editingCellRef = useRef<HTMLDivElement | null>(null);
+
   // 数据
   const cols = Array.from({ length: 30 }, (_, i) => i + 1);
   const rows = Array.from({ length: 1000 }, (_, i) => i + 1);
+
+  // 单元格数据存储
+  const cellDataRef = useRef<CellData>({});
 
   const config = {
     cellWidth: 160,
@@ -29,6 +48,18 @@ const VirtualCanvasTable: React.FC = () => {
   const totalWidth = cols.length * config.cellWidth;
   const totalHeight = rows.length * config.cellHeight;
 
+  // 获取单元格的值
+  const getCellValue = (row: number, col: number) => {
+    const key = `${row}-${col}`;
+    return cellDataRef.current[key] || `Row ${rows[row]}, Column ${cols[col]}`;
+  };
+
+  // 设置单元格的值
+  const setCellValue = (row: number, col: number, value: string) => {
+    const key = `${row}-${col}`;
+    cellDataRef.current[key] = value;
+  };
+
   /** -------------------滚动事件------------------- */
   const onScroll = () => {
     if (!containerRef.current) return;
@@ -36,6 +67,83 @@ const VirtualCanvasTable: React.FC = () => {
     scrollRef.current = { x: scrollLeft, y: scrollTop };
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
+  };
+
+  /** -------------------处理单元格点击------------------- */
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!contentRef.current || !containerRef.current) return;
+
+    const rect = contentRef.current.getBoundingClientRect();
+    // 修正坐标计算，考虑新的布局和边距
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    const y = e.clientY - rect.top + scrollRef.current.y;
+
+    // 计算点击的行列
+    const col = Math.floor(x / config.cellWidth);
+    // 注意：这里不需要减去 config.headerHeight，因为 content canvas 不包含表头
+    const row = Math.floor(y / config.cellHeight);
+
+    // 检查是否在有效范围内
+    if (row >= 0 && row < rows.length && col >= 0 && col < cols.length) {
+      // 设置编辑状态
+      setEditingCell({ row, col });
+      setEditValue(getCellValue(row, col));
+
+      // 确保单元格在视口中可见
+      const container = containerRef.current;
+      const cellTop = row * config.cellHeight;
+      const cellBottom = cellTop + config.cellHeight;
+      const cellLeft = col * config.cellWidth;
+      const cellRight = cellLeft + config.cellWidth;
+
+      // 检查是否需要滚动
+      if (cellTop < container.scrollTop) {
+        container.scrollTop = cellTop;
+      } else if (cellBottom > container.scrollTop + container.clientHeight) {
+        container.scrollTop = cellBottom - container.clientHeight;
+      }
+
+      if (cellLeft < container.scrollLeft) {
+        container.scrollLeft = cellLeft;
+      } else if (cellRight > container.scrollLeft + container.clientWidth) {
+        container.scrollLeft = cellRight - container.clientWidth;
+      }
+    }
+  };
+
+  /** -------------------处理编辑完成------------------- */
+  const handleEditComplete = () => {
+    if (editingCell) {
+      setCellValue(editingCell.row, editingCell.col, editValue);
+      setEditingCell(null);
+      setEditValue("");
+      // 重新绘制
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+    }
+  };
+
+  /** -------------------处理编辑取消------------------- */
+  const handleEditCancel = () => {
+    setEditingCell(null);
+    setEditValue("");
+  };
+
+  /** -------------------处理键盘事件------------------- */
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleEditComplete();
+    } else if (e.key === "Escape") {
+      handleEditCancel();
+    }
+  };
+
+  /** -------------------处理编辑框失去焦点------------------- */
+  const handleEditBlur = () => {
+    // 延迟执行，确保这是真正的失去焦点而不是临时的
+    setTimeout(() => {
+      handleEditComplete();
+    }, 100);
   };
 
   /** -------------------绘制 Header------------------- */
@@ -110,8 +218,16 @@ const VirtualCanvasTable: React.FC = () => {
       for (let c = startCol; c < endCol; c++) {
         const colX = c * config.cellWidth - x;
         ctx.fillStyle = config.textColor;
+
+        // 如果是正在编辑的单元格，绘制高亮背景
+        if (editingCell && editingCell.row === r && editingCell.col === c) {
+          ctx.fillStyle = "#e3f2fd";
+          ctx.fillRect(colX, rowY, config.cellWidth, config.cellHeight);
+          ctx.fillStyle = config.textColor;
+        }
+
         ctx.fillText(
-          `Row ${rows[r]}, Column ${cols[c]}`,
+          getCellValue(r, c),
           colX + 15,
           rowY + config.cellHeight / 2
         );
@@ -156,6 +272,7 @@ const VirtualCanvasTable: React.FC = () => {
 
     const resize = () => {
       const w = container.clientWidth;
+      // 考虑表头高度来计算内容区域的高度
       const h = container.clientHeight;
       viewportRef.current = { width: w, height: h };
 
@@ -194,6 +311,13 @@ const VirtualCanvasTable: React.FC = () => {
     };
   }, []);
 
+  // 当编辑状态改变时，聚焦到输入框
+  useEffect(() => {
+    if (editingCell && editingCellRef.current) {
+      editingCellRef.current.focus();
+    }
+  }, [editingCell]);
+
   return (
     <div
       style={{
@@ -201,6 +325,7 @@ const VirtualCanvasTable: React.FC = () => {
         padding: 20,
         background: "#f8f9fa",
         position: "relative",
+        overflow: "hidden", // 防止外部出现滚动条
       }}
     >
       <canvas
@@ -220,8 +345,8 @@ const VirtualCanvasTable: React.FC = () => {
       <div
         ref={containerRef}
         style={{
-          height: "calc(100vh - 180px)",
-          maxHeight: "calc(100vh - 180px)",
+          height: "100%",
+          maxHeight: "100%",
           overflow: "auto",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
           backgroundColor: "white",
@@ -232,18 +357,54 @@ const VirtualCanvasTable: React.FC = () => {
       </div>
       <canvas
         ref={contentRef}
+        onDoubleClick={handleCanvasClick}
         style={{
           position: "absolute",
-          top: 44,
-          left: 0,
+          top: config.headerHeight + 20, // 添加 config.headerHeight 偏移
+          left: 20,
           display: "block",
-          width: "100%",
-          height: "100%",
+          width: "calc(100% - 40px)", // 考虑左右padding
+          height: "calc(100% - 100px)", // 使用相对高度
           zIndex: 1,
-          pointerEvents: "none",
-          margin: "20px 0 0 20px",
+          pointerEvents: "auto",
+          cursor: "pointer",
         }}
       />
+
+      {/* 编辑输入框 */}
+      {editingCell && (
+        <div
+          ref={editingCellRef}
+          contentEditable
+          onBlur={handleEditBlur}
+          onKeyDown={handleKeyDown}
+          style={{
+            position: "absolute",
+            left: editingCell.col * config.cellWidth - scrollRef.current.x + 20,
+            top:
+              editingCell.row * config.cellHeight -
+              scrollRef.current.y +
+              config.headerHeight +
+              20, // 添加 config.headerHeight 偏移
+            width: config.cellWidth - 10,
+            height: config.cellHeight - 4,
+            border: "2px solid #4a90e2",
+            borderRadius: "2px",
+            padding: "0 5px",
+            backgroundColor: "white",
+            zIndex: 10,
+            outline: "none",
+            fontSize: `${config.fontSize}px`,
+            lineHeight: `${config.cellHeight - 4}px`,
+            boxSizing: "border-box",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          dangerouslySetInnerHTML={{ __html: editValue }}
+          onInput={(e) => setEditValue(e.currentTarget.textContent || "")}
+        />
+      )}
     </div>
   );
 };

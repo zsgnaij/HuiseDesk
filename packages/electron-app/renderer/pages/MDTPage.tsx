@@ -216,7 +216,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   tableContainer: {
     flex: 1,
-    overflow: "auto",
+    overflow: "hidden", // 防止出现双重滚动条
     height: "calc(100% - 120px)",
   },
   // Markdown样式
