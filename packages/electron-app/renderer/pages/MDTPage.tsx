@@ -138,7 +138,7 @@ const MDTPage: React.FC = () => {
                 onChange={() => setSelectedTable("virtualCanvas")}
                 style={styles.radio}
               />
-              Canvas虚拟滚动表格
+              Canvas可视区域渲染表格
             </label>
           </div>
         </div>
