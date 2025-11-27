@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useTransition } from "react";
 import DomTable from "../components/Table/DomTable";
 import VirtualDomTable from "../components/Table/VirtualDomTable";
 import CanvasTable from "../components/Table/CanvasTable";
@@ -18,7 +18,7 @@ const MDTPage: React.FC = () => {
 
   // 抽屉状态
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
-
+  const [_isPending, startTransition] = useTransition();
   // 用于防止重复分析的ref
   const analyzeTriggered = useRef(false);
 
@@ -49,7 +49,9 @@ const MDTPage: React.FC = () => {
       };
       console.log("[Performance] Extracted performance data:", perfData);
       const analysisResult = await analyzeWebVitalsWithLLM(perfData);
-      setLlmAnalysis(analysisResult);
+      startTransition(() => {
+        setLlmAnalysis(analysisResult);
+      });
     } catch (error) {
       console.error("性能分析失败:", error);
     } finally {
