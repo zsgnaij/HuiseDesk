@@ -234,6 +234,11 @@ const MultiDimensionalTable: React.FC = () => {
     }, 100);
   };
 
+  // 处理编辑框输入
+  const handleEditInput = (e: React.FormEvent<HTMLDivElement>) => {
+    setEditValue(e.currentTarget.textContent || "");
+  };
+
   // 绘制表头
   const drawHeader = (ctx: CanvasRenderingContext2D) => {
     const { width: w } = viewportRef.current;
@@ -507,7 +512,15 @@ const MultiDimensionalTable: React.FC = () => {
   // 编辑框自动聚焦
   useEffect(() => {
     if (editingCell && editingCellRef.current) {
+      editingCellRef.current.textContent = editValue;
       editingCellRef.current.focus();
+      // 将光标移到末尾
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(editingCellRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
   }, [editingCell]);
 
@@ -583,6 +596,7 @@ const MultiDimensionalTable: React.FC = () => {
           contentEditable
           onBlur={handleEditBlur}
           onKeyDown={handleKeyDown}
+          onInput={handleEditInput}
           style={{
             position: "absolute",
             left: editingCell.col * config.cellWidth - scrollRef.current.x + 21,
@@ -605,8 +619,6 @@ const MultiDimensionalTable: React.FC = () => {
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
-          dangerouslySetInnerHTML={{ __html: editValue }}
-          onInput={(e) => setEditValue(e.currentTarget.textContent || "")}
         />
       )}
     </div>
