@@ -120,8 +120,8 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
     // 注意：这里不需要减去 config.headerHeight，因为 content canvas 不包含表头
     const row = Math.floor(y / config.cellHeight);
 
-    // 检查是否点击了新增行的 "+" 号（在最后一行最左端）
-    if (row === rows.length && col === 0) {
+    // 检查是否点击了新增行的 "+" 号（在最后一行，整行宽度）
+    if (row === rows.length) {
       addRow();
       // 重新绘制以更新界面
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -202,8 +202,8 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
     const col = Math.floor(x / config.cellWidth);
     const row = Math.floor(y / config.cellHeight);
     
-    // 检查是否在新增行的 "+" 号上（最后一行最左端）
-    const isOnAddRowPlus = row === rows.length && col === 0;
+    // 检查是否在新增行的 "+" 号上（最后一行，整行宽度）
+    const isOnAddRowPlus = row === rows.length;
     
     // 不检查内容区域右下角的 "+" 号
     
@@ -281,6 +281,14 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
       ctx.lineTo(cx + config.cellWidth - 0.5, config.headerHeight);
     }
     
+    // 绘制表头左侧边框线
+    ctx.moveTo(0.5, 0);
+    ctx.lineTo(0.5, config.headerHeight);
+    
+    // 绘制表头顶部边框线
+    ctx.moveTo(0, 0.5);
+    ctx.lineTo(w, 0.5);
+    
     // 绘制表头底部边框线
     ctx.moveTo(0, config.headerHeight - 0.5);
     ctx.lineTo(w, config.headerHeight - 0.5);
@@ -309,12 +317,31 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
                         mousePositionRef.current.y >= 0 && 
                         mousePositionRef.current.y < config.headerHeight;
       
-      ctx.fillStyle = isHovered ? "#e0e0e0" : "#f0f0f0"; // 悬停时使用深色背景
+      ctx.fillStyle = isHovered ? "#e8e8e8" : "#ffffff"; // 悬停时使用浅灰色背景，默认白色
       ctx.fillRect(lastColX, 0, config.cellWidth, config.headerHeight);
       
       ctx.strokeStyle = config.borderColor;
       ctx.lineWidth = config.borderWidth;
-      ctx.strokeRect(lastColX, 0, config.cellWidth, config.headerHeight);
+      
+      // 不绘制左边框线，因为它与表头最后一列的右边框线重叠
+      
+      // 绘制右边框线
+      ctx.beginPath();
+      ctx.moveTo(lastColX + config.cellWidth - 0.5, 0);
+      ctx.lineTo(lastColX + config.cellWidth - 0.5, config.headerHeight);
+      ctx.stroke();
+      
+      // 绘制顶部边框线
+      ctx.beginPath();
+      ctx.moveTo(lastColX, 0.5);
+      ctx.lineTo(lastColX + config.cellWidth, 0.5);
+      ctx.stroke();
+      
+      // 绘制底部边框线
+      ctx.beginPath();
+      ctx.moveTo(lastColX, config.headerHeight - 0.5);
+      ctx.lineTo(lastColX + config.cellWidth, config.headerHeight - 0.5);
+      ctx.stroke();
       
       ctx.fillStyle = "#666";
       ctx.font = `bold ${config.headerFontSize + 4}px Arial`;
@@ -382,25 +409,52 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
     const lastRowY = rows.length * config.cellHeight - y;
     const lastColX = cols.length * config.cellWidth - x;
     
-    // 只在最后一行最左端绘制 "+" 号用于新增行
+    // 计算表格的实际宽度和高度
+    const tableWidth = cols.length * config.cellWidth;
+    const tableHeight = rows.length * config.cellHeight;
+    
+    // 只在最后一行绘制 "+" 号用于新增行，宽度为总列宽度
     if (lastRowY >= -config.cellHeight && lastRowY < h) {
       // 检查鼠标是否悬停在新增行的 "+" 号上
       const isHovered = mousePositionRef.current.x >= 0 && 
-                        mousePositionRef.current.x < config.cellWidth && 
+                        mousePositionRef.current.x < tableWidth && 
                         mousePositionRef.current.y >= lastRowY && 
                         mousePositionRef.current.y < lastRowY + config.cellHeight;
       
-      ctx.fillStyle = isHovered ? "#e0e0e0" : "#f0f0f0"; // 悬停时使用深色背景
-      ctx.fillRect(0, lastRowY, config.cellWidth, config.cellHeight);
+      ctx.fillStyle = isHovered ? "#e8e8e8" : "#ffffff"; // 悬停时使用浅灰色背景，默认白色
+      ctx.fillRect(0, lastRowY, tableWidth, config.cellHeight);
       
+      // 绘制整行的左边框线
       ctx.strokeStyle = config.borderColor;
       ctx.lineWidth = config.borderWidth;
-      ctx.strokeRect(0, lastRowY, config.cellWidth, config.cellHeight);
+      ctx.beginPath();
+      ctx.moveTo(0.5, lastRowY);
+      ctx.lineTo(0.5, lastRowY + config.cellHeight);
+      ctx.stroke();
+      
+      // 绘制整行的右边框线
+      const rightX = Math.min(tableWidth, w) - 0.5;
+      ctx.beginPath();
+      ctx.moveTo(rightX, lastRowY);
+      ctx.lineTo(rightX, lastRowY + config.cellHeight);
+      ctx.stroke();
+      
+      // 绘制整行的上边框线
+      ctx.beginPath();
+      ctx.moveTo(0, lastRowY - 0.5);
+      ctx.lineTo(w, lastRowY - 0.5);
+      ctx.stroke();
+      
+      // 绘制整行的下边框线
+      ctx.beginPath();
+      ctx.moveTo(0, lastRowY + config.cellHeight - 0.5);
+      ctx.lineTo(w, lastRowY + config.cellHeight - 0.5);
+      ctx.stroke();
       
       ctx.fillStyle = "#666";
       ctx.font = `bold ${config.fontSize + 4}px Arial`;
       ctx.textAlign = "center";
-      ctx.fillText("+", config.cellWidth / 2, lastRowY + config.cellHeight / 2);
+      ctx.fillText("+", tableWidth / 2, lastRowY + config.cellHeight / 2);
     }
 
     // 不在内容区域右下角绘制 "+" 号
@@ -408,27 +462,35 @@ const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
     // 绘制网格线
     ctx.beginPath();
     
-    // 绘制垂直线
+    // 绘制canvas左侧边框线
+    ctx.moveTo(0.5, 0);
+    ctx.lineTo(0.5, Math.min(h, tableHeight - y));
+    
+    // 绘制垂直线，但不超过表格实际宽度
     for (let c = startCol; c <= endCol; c++) {
       const cx = c * config.cellWidth - x;
-      ctx.moveTo(cx - 0.5, 0);
-      ctx.lineTo(cx - 0.5, h);
+      // 只绘制在表格范围内的垂直线
+      if (cx >= -1 && cx <= tableWidth - x + 1) {
+        const lineEndY = Math.min(h, tableHeight - y);
+        ctx.moveTo(cx - 0.5, 0);
+        ctx.lineTo(cx - 0.5, lineEndY);
+      }
     }
 
-    // 绘制水平线
+    // 绘制水平线，但不超过表格实际高度
     for (let r = startRow; r <= endRow; r++) {
       const rowY = r * config.cellHeight - y;
-      ctx.moveTo(0, rowY - 0.5);
-      ctx.lineTo(w, rowY - 0.5);
+      // 只绘制在表格范围内的水平线
+      if (rowY >= -1 && rowY <= tableHeight - y + 1) {
+        const lineEndX = Math.min(w, tableWidth - x);
+        
+        // 跳过最后一行，因为最后一行的横向线已经在绘制"+"号时单独绘制了
+        if (r === rows.length) continue;
+        
+        ctx.moveTo(0, rowY - 0.5);
+        ctx.lineTo(lineEndX, rowY - 0.5);
+      }
     }
-    
-    // 绘制内容区域右边框线
-    ctx.moveTo(w - 0.5, 0);
-    ctx.lineTo(w - 0.5, h);
-    
-    // 绘制内容区域底边框线
-    ctx.moveTo(0, h - 0.5);
-    ctx.lineTo(w, h - 0.5);
 
     ctx.strokeStyle = config.borderColor;
     ctx.lineWidth = config.borderWidth;
