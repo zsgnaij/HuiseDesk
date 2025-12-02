@@ -594,6 +594,7 @@ const MultiDimensionalTable: React.FC = () => {
         <div
           ref={editingCellRef}
           contentEditable
+          spellCheck={false}
           onBlur={handleEditBlur}
           onKeyDown={handleKeyDown}
           onInput={handleEditInput}
@@ -613,6 +614,7 @@ const MultiDimensionalTable: React.FC = () => {
             zIndex: 10,
             outline: "none",
             fontSize: `${config.fontSize}px`,
+            fontFamily: "Arial",
             lineHeight: `${config.cellHeight}px`,
             boxSizing: "border-box",
             overflow: "hidden",
