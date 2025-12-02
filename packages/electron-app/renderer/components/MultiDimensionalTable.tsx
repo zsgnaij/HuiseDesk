@@ -29,6 +29,12 @@ const MultiDimensionalTable: React.FC = () => {
   const rafRef = useRef<number | null>(null);
   const mousePositionRef = useRef({ x: -1, y: -1 });
   const hoverRowRef = useRef<number>(-1);
+  
+  // 列宽调整相关
+  const colWidthsRef = useRef<number[]>([]);
+  const [, forceUpdate] = useState({});
+  const resizingColRef = useRef<{ col: number; startX: number; startWidth: number } | null>(null);
+  const hoverResizeColRef = useRef<number>(-1);
 
   // 编辑状态
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
@@ -45,6 +51,15 @@ const MultiDimensionalTable: React.FC = () => {
 
   // 单元格数据存储
   const cellDataRef = useRef<CellData>({});
+  
+  // 初始化列宽
+  useEffect(() => {
+    if (colWidthsRef.current.length === 0) {
+      colWidthsRef.current = new Array(cols.length).fill(config.cellWidth);
+    } else if (colWidthsRef.current.length < cols.length) {
+      colWidthsRef.current = [...colWidthsRef.current, ...new Array(cols.length - colWidthsRef.current.length).fill(config.cellWidth)];
+    }
+  }, [cols.length]);
 
   // 表格配置
   const config = {
@@ -62,8 +77,22 @@ const MultiDimensionalTable: React.FC = () => {
     borderWidth: 1,
   };
 
-  // 计算总尺寸（包含"+"号区域）
-  const totalWidth = (cols.length + 1) * config.cellWidth;
+ // 获取列宽
+  const getColWidth = (col: number) => {
+    return colWidthsRef.current[col] || config.cellWidth;
+  };
+  
+  // 获取列的X坐标
+  const getColX = (col: number) => {
+    let x = 0;
+    for (let i = 0; i < col; i++) {
+      x += getColWidth(i);
+    }
+    return x;
+  };
+  
+  // 计算总宽度（包含"+"号区域）
+  const totalWidth = cols.reduce((sum, _, i) => sum + getColWidth(i), 0) + config.cellWidth;
   const totalHeight = (rows.length + 1) * config.cellHeight;
 
   // 获取单元格值
@@ -100,13 +129,17 @@ const MultiDimensionalTable: React.FC = () => {
   // 表头点击事件（新增列）
   const handleHeaderClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!headerRef.current) return;
+    if (resizingColRef.current) return;
 
     const rect = headerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left + scrollRef.current.x;
 
-    const col = Math.floor(x / config.cellWidth);
+    let currentX = 0;
+    for (let i = 0; i < cols.length; i++) {
+      currentX += getColWidth(i);
+    }
 
-    if (col === cols.length) {
+    if (x >= currentX && x < currentX + config.cellWidth) {
       addCol();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
@@ -121,7 +154,18 @@ const MultiDimensionalTable: React.FC = () => {
     const x = e.clientX - rect.left + scrollRef.current.x;
     const y = e.clientY - rect.top + scrollRef.current.y;
 
-    const col = Math.floor(x / config.cellWidth);
+    // 查找点击的列
+    let col = -1;
+    let currentX = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const colWidth = getColWidth(i);
+      if (x >= currentX && x < currentX + colWidth) {
+        col = i;
+        break;
+      }
+      currentX += colWidth;
+    }
+    
     const row = Math.floor(y / config.cellHeight);
 
     // 点击新增行按钮
@@ -141,8 +185,8 @@ const MultiDimensionalTable: React.FC = () => {
       // 确保编辑的单元格在视口内
       const cellTop = row * config.cellHeight;
       const cellBottom = cellTop + config.cellHeight;
-      const cellLeft = col * config.cellWidth;
-      const cellRight = cellLeft + config.cellWidth;
+      const cellLeft = getColX(col);
+      const cellRight = cellLeft + getColWidth(col);
       if (cellTop < container.scrollTop) {
         container.scrollTop = cellTop;
       } else if (cellBottom > container.scrollTop + container.clientHeight) {
@@ -167,9 +211,27 @@ const MultiDimensionalTable: React.FC = () => {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     };
-    const col = Math.floor(x / config.cellWidth);
-    const isOnAddColPlus = col === cols.length;
-    if (isOnAddColPlus) {
+    
+    // 检查是否在列边框附近（可拖拽调整列宽）
+    let currentX = 0;
+    let nearResizeCol = -1;
+    for (let i = 0; i < cols.length; i++) {
+      currentX += getColWidth(i);
+      if (Math.abs(x - currentX) < 5) {
+        nearResizeCol = i;
+        break;
+      }
+    }
+    
+    hoverResizeColRef.current = nearResizeCol;
+    
+    // 检查是否在新增列按钮上
+    const lastColX = cols.reduce((sum, _, i) => sum + getColWidth(i), 0) - scrollRef.current.x;
+    const isOnAddColPlus = x >= lastColX && x < lastColX + config.cellWidth;
+    
+    if (nearResizeCol !== -1) {
+      headerRef.current.style.cursor = "col-resize";
+    } else if (isOnAddColPlus) {
       headerRef.current.style.cursor = "pointer";
     } else {
       headerRef.current.style.cursor = "default";
@@ -177,6 +239,46 @@ const MultiDimensionalTable: React.FC = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
   };
+  
+  // 表头鼠标按下事件
+  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!headerRef.current || hoverResizeColRef.current === -1) return;
+    
+    const rect = headerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    
+    resizingColRef.current = {
+      col: hoverResizeColRef.current,
+      startX: x,
+      startWidth: getColWidth(hoverResizeColRef.current)
+    };
+  };
+  
+  // 全局鼠标移动事件（拖拽调整列宽）
+  const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingColRef.current || !headerRef.current) return;
+    
+    const rect = headerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    const deltaX = x - resizingColRef.current.startX;
+    const newWidth = Math.max(50, resizingColRef.current.startWidth + deltaX);
+    
+    // 直接修改ref，避免状态更新导致的闪烁
+    colWidthsRef.current[resizingColRef.current.col] = newWidth;
+    
+    // 立即重绘
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(draw);
+  }, []);
+  
+  // 全局鼠标释放事件
+  const handleGlobalMouseUp = useCallback(() => {
+    if (resizingColRef.current) {
+      resizingColRef.current = null;
+      // 松开时强制更新一次以保存最终状态
+      forceUpdate({});
+    }
+  }, []);
 
   // 内容区域鼠标移动事件（悬停效果和光标样式）
   const handleContentMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -190,7 +292,19 @@ const MultiDimensionalTable: React.FC = () => {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     };
-    const col = Math.floor(x / config.cellWidth);
+    
+    // 查找鼠标所在的列
+    let col = -1;
+    let currentX = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const colWidth = getColWidth(i);
+      if (x >= currentX && x < currentX + colWidth) {
+        col = i;
+        break;
+      }
+      currentX += colWidth;
+    }
+    
     const row = Math.floor(y / config.cellHeight);
     
     // 更新悬停行
@@ -262,19 +376,37 @@ const MultiDimensionalTable: React.FC = () => {
 
     // 计算可见列范围
     const bufferCols = 2;
-    const startCol = Math.max(0, Math.floor(x / config.cellWidth) - bufferCols);
-    const visibleCols = Math.ceil(w / config.cellWidth);
-    const endCol = Math.min(
-      cols.length,
-      startCol + visibleCols + bufferCols * 2
-    );
+    let startCol = -1;
+    let endCol = -1;
+    let currentX = 0;
+    
+    for (let i = 0; i < cols.length; i++) {
+      const colWidth = getColWidth(i);
+      if (currentX + colWidth >= x - bufferCols * config.cellWidth && startCol === -1) {
+        startCol = Math.max(0, i - bufferCols);
+      }
+      if (currentX > x + w + bufferCols * config.cellWidth && endCol === -1) {
+        endCol = Math.min(cols.length, i + bufferCols);
+        break;
+      }
+      currentX += colWidth;
+    }
+    
+    if (startCol === -1) startCol = 0;
+    if (endCol === -1) endCol = cols.length;
 
     // 绘制列分隔线
     ctx.beginPath();
-    for (let c = startCol; c < endCol; c++) {
-      const cx = c * config.cellWidth - x;
-      ctx.moveTo(cx + config.cellWidth - 0.5, 0);
-      ctx.lineTo(cx + config.cellWidth - 0.5, config.headerHeight);
+    currentX = 0;
+    for (let c = 0; c <= endCol; c++) {
+      if (c >= startCol) {
+        const cx = currentX - x;
+        ctx.moveTo(cx - 0.5, 0);
+        ctx.lineTo(cx - 0.5, config.headerHeight);
+      }
+      if (c < cols.length) {
+        currentX += getColWidth(c);
+      }
     }
     
     // 绘制表头底部边框
@@ -291,13 +423,18 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
 
-    for (let c = startCol; c < endCol; c++) {
-      const cx = c * config.cellWidth - x;
-      ctx.fillText(`Column ${cols[c]}`, cx + 15, config.headerHeight / 2);
+    currentX = 0;
+    for (let c = 0; c < cols.length; c++) {
+      const colWidth = getColWidth(c);
+      if (c >= startCol && c < endCol) {
+        const cx = currentX - x;
+        ctx.fillText(`Column ${cols[c]}`, cx + 15, config.headerHeight / 2);
+      }
+      currentX += colWidth;
     }
 
     // 绘制新增列按钮
-    const lastColX = cols.length * config.cellWidth - x;
+    const lastColX = currentX - x;
     if (lastColX >= -config.cellWidth && lastColX < w) {
       const isHovered =
         mousePositionRef.current.x >= lastColX &&
@@ -354,18 +491,31 @@ const MultiDimensionalTable: React.FC = () => {
       Math.ceil((y + h) / config.cellHeight) + bufferRows
     );
 
-    const startCol = Math.max(0, Math.floor(x / config.cellWidth) - bufferCols);
-    const endCol = Math.min(
-      cols.length,
-      Math.ceil((x + w) / config.cellWidth) + bufferCols
-    );
+    let startCol = -1;
+    let endCol = -1;
+    let currentX = 0;
+    
+    for (let i = 0; i < cols.length; i++) {
+      const colWidth = getColWidth(i);
+      if (currentX + colWidth >= x - bufferCols * config.cellWidth && startCol === -1) {
+        startCol = Math.max(0, i - bufferCols);
+      }
+      if (currentX > x + w + bufferCols * config.cellWidth && endCol === -1) {
+        endCol = Math.min(cols.length, i + bufferCols);
+        break;
+      }
+      currentX += colWidth;
+    }
+    
+    if (startCol === -1) startCol = 0;
+    if (endCol === -1) endCol = cols.length;
 
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
     ctx.font = `${config.fontSize}px Arial`;
     
     // 计算表格实际尺寸
-    const tableWidth = cols.length * config.cellWidth;
+    const tableWidth = cols.reduce((sum, _, i) => sum + getColWidth(i), 0);
     const tableHeight = rows.length * config.cellHeight;
     
     // 绘制单元格背景和内容
@@ -381,20 +531,25 @@ const MultiDimensionalTable: React.FC = () => {
       const bgWidth = Math.min(w, tableWidth - x);
       ctx.fillRect(0, rowY, bgWidth, config.cellHeight);
 
-      for (let c = startCol; c < endCol; c++) {
-        const colX = c * config.cellWidth - x;
-        ctx.fillStyle = config.textColor;
-        if (editingCell && editingCell.row === r && editingCell.col === c) {
-          ctx.fillStyle = "#e3f2fd";
-          ctx.fillRect(colX, rowY, config.cellWidth, config.cellHeight);
+      let colX = 0;
+      for (let c = 0; c < cols.length; c++) {
+        const colWidth = getColWidth(c);
+        if (c >= startCol && c < endCol) {
+          const cellX = colX - x;
           ctx.fillStyle = config.textColor;
-        }
+          if (editingCell && editingCell.row === r && editingCell.col === c) {
+            ctx.fillStyle = "#e3f2fd";
+            ctx.fillRect(cellX, rowY, colWidth, config.cellHeight);
+            ctx.fillStyle = config.textColor;
+          }
 
-        ctx.fillText(
-          getCellValue(r, c),
-          colX + 15,
-          rowY + config.cellHeight / 2
-        );
+          ctx.fillText(
+            getCellValue(r, c),
+            cellX + 15,
+            rowY + config.cellHeight / 2
+          );
+        }
+        colX += colWidth;
       }
     }
     
@@ -441,12 +596,18 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.beginPath();
     
     // 绘制垂直网格线
-    for (let c = startCol; c <= endCol; c++) {
-      const cx = c * config.cellWidth - x;
-      if (cx >= -1 && cx <= tableWidth - x + 1) {
-        const lineEndY = Math.min(h, tableHeight - y);
-        ctx.moveTo(cx - 0.5, 0);
-        ctx.lineTo(cx - 0.5, lineEndY);
+    currentX = 0;
+    for (let c = 0; c <= cols.length; c++) {
+      if (c >= startCol && c <= endCol) {
+        const cx = currentX - x;
+        if (cx >= -1 && cx <= tableWidth - x + 1) {
+          const lineEndY = Math.min(h, tableHeight - y);
+          ctx.moveTo(cx - 0.5, 0);
+          ctx.lineTo(cx - 0.5, lineEndY);
+        }
+      }
+      if (c < cols.length) {
+        currentX += getColWidth(c);
       }
     }
 
@@ -521,13 +682,17 @@ const MultiDimensionalTable: React.FC = () => {
     ro.observe(container);
 
     container.addEventListener("scroll", onScroll);
+    document.addEventListener("mousemove", handleGlobalMouseMove);
+    document.addEventListener("mouseup", handleGlobalMouseUp);
 
     return () => {
       ro.disconnect();
       container.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("mouseup", handleGlobalMouseUp);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-    }, [cols.length, rows.length]);
+    }, [cols.length, rows.length, handleGlobalMouseMove, handleGlobalMouseUp, draw]);
   
   // 编辑框自动聚焦
   useEffect(() => {
@@ -577,6 +742,7 @@ const MultiDimensionalTable: React.FC = () => {
       <canvas
         ref={headerRef}
         onClick={handleHeaderClick}
+        onMouseDown={handleHeaderMouseDown}
         onMouseMove={handleHeaderMouseMove}
         style={{
           position: "absolute",
@@ -621,13 +787,13 @@ const MultiDimensionalTable: React.FC = () => {
           onInput={handleEditInput}
           style={{
             position: "absolute",
-            left: editingCell.col * config.cellWidth - scrollRef.current.x + 21,
+            left: getColX(editingCell.col) - scrollRef.current.x + 21,
             top:
               editingCell.row * config.cellHeight -
               scrollRef.current.y +
               config.headerHeight +
               21,
-            width: config.cellWidth,
+            width: getColWidth(editingCell.col),
             height: config.cellHeight,
             border: "2px solid #4a90e2",
             padding: "0 15px",
