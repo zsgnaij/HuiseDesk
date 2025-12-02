@@ -110,7 +110,13 @@ const MultiDimensionalTable: React.FC = () => {
   // 新增行
   const addRow = useCallback(() => {
     setRows((prev) => [...prev, prev.length + 1]);
-  }, []);
+    // 自动聚焦到新行的第一列
+    const newRowIndex = rows.length;
+    setTimeout(() => {
+      setEditingCell({ row: newRowIndex, col: 0 });
+      setEditValue(getCellValue(newRowIndex, 0));
+    }, 0);
+  }, [rows.length]);
 
   // 新增列
   const addCol = useCallback(() => {
@@ -310,6 +316,7 @@ const MultiDimensionalTable: React.FC = () => {
     // 更新悬停行
     hoverRowRef.current = row < rows.length ? row : -1;
     
+    // 检查是否在新增行按钮上
     const isOnAddRowPlus = row === rows.length;
     if (isOnAddRowPlus) {
       contentRef.current.style.cursor = "pointer";
@@ -556,7 +563,7 @@ const MultiDimensionalTable: React.FC = () => {
     // 计算最后一行位置
     const lastRowY = rows.length * config.cellHeight - y;
         
-    // 绘制新增行按钮
+    // 绘制新增行按钮（靠左显示，宽度为所有列宽之和）
     if (lastRowY >= -config.cellHeight && lastRowY < h) {
       const isHovered =
         mousePositionRef.current.x >= 0 &&
@@ -566,30 +573,32 @@ const MultiDimensionalTable: React.FC = () => {
 
       ctx.fillStyle = isHovered ? "#e8e8e8" : "#ffffff";
       ctx.fillRect(0, lastRowY, tableWidth, config.cellHeight);
+      
       ctx.strokeStyle = config.borderColor;
       ctx.lineWidth = config.borderWidth;
-      ctx.beginPath();
-      ctx.moveTo(0.5, lastRowY);
-      ctx.lineTo(0.5, lastRowY + config.cellHeight);
-      ctx.stroke();
-      const rightX = Math.min(tableWidth, w) - 0.5;
-      ctx.beginPath();
-      ctx.moveTo(rightX, lastRowY);
-      ctx.lineTo(rightX, lastRowY + config.cellHeight);
-      ctx.stroke();
+
+      // 绘制上边框
       ctx.beginPath();
       ctx.moveTo(0, lastRowY - 0.5);
-      ctx.lineTo(w, lastRowY - 0.5);
+      ctx.lineTo(tableWidth, lastRowY - 0.5);
       ctx.stroke();
+
+      // 绘制底部边框（延伸到整个视口宽度）
       ctx.beginPath();
       ctx.moveTo(0, lastRowY + config.cellHeight - 0.5);
       ctx.lineTo(w, lastRowY + config.cellHeight - 0.5);
       ctx.stroke();
+      
+      // 绘制右边框
+      ctx.beginPath();
+      ctx.moveTo(tableWidth - 0.5, lastRowY);
+      ctx.lineTo(tableWidth - 0.5, lastRowY + config.cellHeight);
+      ctx.stroke();
 
       ctx.fillStyle = "#666";
       ctx.font = `bold ${config.fontSize + 4}px Arial`;
-      ctx.textAlign = "center";
-      ctx.fillText("+", tableWidth / 2, lastRowY + config.cellHeight / 2);
+      ctx.textAlign = "left";
+      ctx.fillText("+", 15, lastRowY + config.cellHeight / 2);
     }
 
     // 绘制网格线
