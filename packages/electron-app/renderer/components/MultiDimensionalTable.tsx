@@ -42,7 +42,7 @@ const MultiDimensionalTable: React.FC = () => {
   const editingCellRef = useRef<HTMLDivElement | null>(null);
   
   // 右键菜单状态
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; col: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; col?: number; row?: number; type: 'header' | 'content' } | null>(null);
 
   // 行列数据
   const [cols, setCols] = useState<number[]>(
@@ -121,6 +121,42 @@ const MultiDimensionalTable: React.FC = () => {
     }, 0);
   }, [rows.length]);
 
+  // 删除行
+  const deleteRow = useCallback((rowIndex: number) => {
+    if (rows.length <= 1) {
+      alert('至少需要保留一行');
+      return;
+    }
+    
+    // 删除行
+    setRows(prev => prev.filter((_, i) => i !== rowIndex));
+    
+    // 删除该行的所有单元格数据
+    const newCellData: CellData = {};
+    Object.keys(cellDataRef.current).forEach(key => {
+      const [row, col] = key.split('-').map(Number);
+      if (row < rowIndex) {
+        newCellData[key] = cellDataRef.current[key];
+      } else if (row > rowIndex) {
+        // 行索引减1
+        newCellData[`${row - 1}-${col}`] = cellDataRef.current[key];
+      }
+    });
+    cellDataRef.current = newCellData;
+    
+    // 如果正在编辑的单元格在被删除的行，取消编辑
+    if (editingCell && editingCell.row === rowIndex) {
+      setEditingCell(null);
+      setEditValue('');
+    } else if (editingCell && editingCell.row > rowIndex) {
+      // 更新编辑单元格的行索引
+      setEditingCell({ ...editingCell, row: editingCell.row - 1 });
+    }
+    
+    // 强制更新
+    forceUpdate({});
+  }, [rows.length, editingCell]);
+
   // 删除列
   const deleteCol = useCallback((colIndex: number) => {
     if (cols.length <= 1) {
@@ -190,7 +226,30 @@ const MultiDimensionalTable: React.FC = () => {
       setContextMenu({
         x: e.clientX,
         y: e.clientY,
-        col
+        col,
+        type: 'header'
+      });
+    }
+  };
+  
+  // 内容区域右键事件
+  const handleContentContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!contentRef.current) return;
+
+    const rect = contentRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    const y = e.clientY - rect.top + scrollRef.current.y;
+
+    const row = Math.floor(y / config.cellHeight);
+
+    // 如果点击的是有效行（不包括新增行按钮），显示右键菜单
+    if (row >= 0 && row < rows.length) {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        row,
+        type: 'content'
       });
     }
   };
@@ -202,11 +261,19 @@ const MultiDimensionalTable: React.FC = () => {
   
   // 处理删除列操作
   const handleDeleteColumn = useCallback(() => {
-    if (contextMenu) {
+    if (contextMenu && contextMenu.type === 'header' && contextMenu.col !== undefined) {
       deleteCol(contextMenu.col);
       closeContextMenu();
     }
   }, [contextMenu, deleteCol, closeContextMenu]);
+  
+  // 处理删除行操作
+  const handleDeleteRow = useCallback(() => {
+    if (contextMenu && contextMenu.type === 'content' && contextMenu.row !== undefined) {
+      deleteRow(contextMenu.row);
+      closeContextMenu();
+    }
+  }, [contextMenu, deleteRow, closeContextMenu]);
 
   // 滚动事件处理
   const onScroll = () => {
@@ -856,6 +923,7 @@ const MultiDimensionalTable: React.FC = () => {
         onClick={handleCanvasClick}
         onMouseMove={handleContentMouseMove}
         onMouseLeave={handleContentMouseLeave}
+        onContextMenu={handleContentContextMenu}
         onWheel={(e) => {
           e.stopPropagation();
           if (containerRef.current) {
@@ -924,19 +992,36 @@ const MultiDimensionalTable: React.FC = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div
-            onClick={handleDeleteColumn}
-            style={{
-              padding: "8px 16px",
-              cursor: "pointer",
-              fontSize: "13px",
-              color: "#333",
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
-          >
-            删除列
-          </div>
+          {contextMenu.type === 'header' && (
+            <div
+              onClick={handleDeleteColumn}
+              style={{
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontSize: "13px",
+                color: "#333",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+            >
+              删除列
+            </div>
+          )}
+          {contextMenu.type === 'content' && (
+            <div
+              onClick={handleDeleteRow}
+              style={{
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontSize: "13px",
+                color: "#333",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+            >
+              删除记录
+            </div>
+          )}
         </div>
       )}
     </div>
