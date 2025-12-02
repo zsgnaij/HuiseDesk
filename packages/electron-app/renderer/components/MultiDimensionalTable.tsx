@@ -40,6 +40,7 @@ const MultiDimensionalTable: React.FC = () => {
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const [editValue, setEditValue] = useState("");
   const editingCellRef = useRef<HTMLDivElement | null>(null);
+  const isEditingSwitchingRef = useRef(false); // 标记是否正在切换编辑
   
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; col?: number; row?: number; type: 'header' | 'content' } | null>(null);
@@ -349,6 +350,12 @@ const MultiDimensionalTable: React.FC = () => {
 
     // 点击序号列，切换选中
     if (x < config.indexColWidth && row >= 0 && row < rows.length) {
+      // 先完成当前编辑
+      if (editingCell) {
+        setCellValue(editingCell.row, editingCell.col, editValue);
+        setEditingCell(null);
+        setEditValue("");
+      }
       toggleRowSelect(row);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
@@ -369,6 +376,12 @@ const MultiDimensionalTable: React.FC = () => {
 
     // 点击新增行按钮
     if (row === rows.length) {
+      // 先完成当前编辑
+      if (editingCell) {
+        setCellValue(editingCell.row, editingCell.col, editValue);
+        setEditingCell(null);
+        setEditValue("");
+      }
       addRow();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
@@ -377,8 +390,23 @@ const MultiDimensionalTable: React.FC = () => {
 
     // 编辑单元格
     if (row >= 0 && row < rows.length && col >= 0 && col < cols.length) {
+      // 标记正在切换编辑
+      isEditingSwitchingRef.current = true;
+      
+      // 如果当前有编辑的单元格，先保存
+      if (editingCell) {
+        setCellValue(editingCell.row, editingCell.col, editValue);
+      }
+      
+      // 立即设置新的编辑单元格
       setEditingCell({ row, col });
       setEditValue(getCellValue(row, col));
+      
+      // 重置切换标记
+      setTimeout(() => {
+        isEditingSwitchingRef.current = false;
+      }, 200);
+      
       const container = containerRef.current;
       
       // 确保编辑的单元格在视口内
@@ -396,6 +424,11 @@ const MultiDimensionalTable: React.FC = () => {
         container.scrollLeft = cellLeft;
       } else if (cellRight > container.scrollLeft + container.clientWidth) {
         container.scrollLeft = cellRight - container.clientWidth;
+      }
+    } else {
+      // 点击了空白区域，完成当前编辑
+      if (editingCell) {
+        handleEditComplete();
       }
     }
   };
@@ -556,10 +589,18 @@ const MultiDimensionalTable: React.FC = () => {
   };
 
   // 编辑框失焦处理
-  const handleEditBlur = () => {
+  const handleEditBlur = (e: React.FocusEvent) => {
+    // 延迟处理，给点击事件时间先执行
     setTimeout(() => {
-      handleEditComplete();
-    }, 100);
+      // 如果正在切换编辑，不要完成编辑
+      if (isEditingSwitchingRef.current) {
+        return;
+      }
+      // 完成编辑
+      if (editingCell) {
+        handleEditComplete();
+      }
+    }, 150);
   };
 
   // 处理编辑框输入
@@ -995,6 +1036,30 @@ const MultiDimensionalTable: React.FC = () => {
       sel?.addRange(range);
     }
   }, [editingCell]);
+  
+  // 编辑框位置跟随滚动更新
+  useEffect(() => {
+    if (!editingCell || !editingCellRef.current || !containerRef.current) return;
+    
+    const updateEditBoxPosition = () => {
+      if (!editingCell || !editingCellRef.current) return;
+      
+      const { scrollLeft, scrollTop } = containerRef.current!;
+      const left = config.indexColWidth + getColX(editingCell.col) - scrollLeft + 21;
+      const top = editingCell.row * config.cellHeight - scrollTop + config.headerHeight + 21;
+      
+      editingCellRef.current.style.left = `${left}px`;
+      editingCellRef.current.style.top = `${top}px`;
+    };
+    
+    // 监听滚动事件
+    const container = containerRef.current;
+    container.addEventListener('scroll', updateEditBoxPosition);
+    
+    return () => {
+      container.removeEventListener('scroll', updateEditBoxPosition);
+    };
+  }, [editingCell, config.indexColWidth, config.cellHeight, config.headerHeight]);
 
   return (
     <div
