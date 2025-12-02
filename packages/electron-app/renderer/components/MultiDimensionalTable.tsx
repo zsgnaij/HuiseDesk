@@ -754,9 +754,17 @@ const MultiDimensionalTable: React.FC = () => {
     for (let r = startRow; r < endRow; r++) {
       const rowY = r * config.cellHeight - y;
       
-      // 判断是否是悬停行
+      // 判断是否是悬停行或选中行
       const isHoverRow = hoverRowRef.current === r;
-      const bg = isHoverRow ? "#f5f5f5" : (r % 2 === 0 ? config.evenBg : config.oddBg);
+      const isSelectedRow = selectedRows.has(r);
+      let bg;
+      if (isSelectedRow) {
+        bg = "#e3f2fd"; // 选中行浅蓝色背景
+      } else if (isHoverRow) {
+        bg = "#f5f5f5"; // 悬停行浅灰色背景
+      } else {
+        bg = r % 2 === 0 ? config.evenBg : config.oddBg; // 默认背景
+      }
       
       ctx.fillStyle = bg;
       // 背景宽度不超过表格宽度
