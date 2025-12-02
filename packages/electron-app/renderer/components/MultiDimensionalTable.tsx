@@ -585,21 +585,21 @@ const MultiDimensionalTable: React.FC = () => {
           onKeyDown={handleKeyDown}
           style={{
             position: "absolute",
-            left: editingCell.col * config.cellWidth - scrollRef.current.x + 20,
+            left: editingCell.col * config.cellWidth - scrollRef.current.x + 21,
             top:
               editingCell.row * config.cellHeight -
               scrollRef.current.y +
               config.headerHeight +
-              20,
-            width: config.cellWidth - 10,
-            height: config.cellHeight - 4,
+              21,
+            width: config.cellWidth,
+            height: config.cellHeight,
             border: "2px solid #4a90e2",
-            padding: "0 5px",
+            padding: "0 15px",
             backgroundColor: "white",
             zIndex: 10,
             outline: "none",
             fontSize: `${config.fontSize}px`,
-            lineHeight: `${config.cellHeight - 4}px`,
+            lineHeight: `${config.cellHeight}px`,
             boxSizing: "border-box",
             overflow: "hidden",
             textOverflow: "ellipsis",
