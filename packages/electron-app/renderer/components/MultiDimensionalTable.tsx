@@ -119,11 +119,19 @@ const MultiDimensionalTable: React.FC = () => {
   // 新增行
   const addRow = useCallback(() => {
     setRows((prev) => [...prev, prev.length + 1]);
+    // 标记正在切换编辑
+    isEditingSwitchingRef.current = true;
+    
     // 自动聚焦到新行的第一列
     const newRowIndex = rows.length;
     setTimeout(() => {
       setEditingCell({ row: newRowIndex, col: 0 });
       setEditValue(getCellValue(newRowIndex, 0));
+      
+      // 重置切换标记
+      setTimeout(() => {
+        isEditingSwitchingRef.current = false;
+      }, 200);
     }, 0);
   }, [rows.length]);
 
@@ -379,8 +387,6 @@ const MultiDimensionalTable: React.FC = () => {
       // 先完成当前编辑
       if (editingCell) {
         setCellValue(editingCell.row, editingCell.col, editValue);
-        setEditingCell(null);
-        setEditValue("");
       }
       addRow();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
