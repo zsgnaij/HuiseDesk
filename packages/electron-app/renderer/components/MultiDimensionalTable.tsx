@@ -137,11 +137,6 @@ const MultiDimensionalTable: React.FC = () => {
 
   // 删除行
   const deleteRow = useCallback((rowIndex: number) => {
-    if (rows.length <= 1) {
-      alert('至少需要保留一行');
-      return;
-    }
-    
     // 删除行
     setRows(prev => prev.filter((_, i) => i !== rowIndex));
     
@@ -284,10 +279,67 @@ const MultiDimensionalTable: React.FC = () => {
   // 处理删除行操作
   const handleDeleteRow = useCallback(() => {
     if (contextMenu && contextMenu.type === 'content' && contextMenu.row !== undefined) {
-      deleteRow(contextMenu.row);
+      // 如果有选中的行，删除所有选中的行
+      if (selectedRows.size > 0) {
+        // 删除选中的行
+        const rowsToDelete = Array.from(selectedRows).sort((a, b) => b - a); // 从后往前删除
+        
+        // 更新rows
+        setRows(prev => prev.filter((_, i) => !selectedRows.has(i)));
+        
+        // 重新映射单元格数据
+        const newCellData: CellData = {};
+        const deletedRows = new Set(selectedRows);
+        
+        Object.keys(cellDataRef.current).forEach(key => {
+          const [row, col] = key.split('-').map(Number);
+          
+          // 计算删除后的新行索引
+          let newRow = row;
+          for (const deletedRow of rowsToDelete) {
+            if (row > deletedRow) {
+              newRow--;
+            }
+          }
+          
+          // 如果该行没被删除，保存数据
+          if (!deletedRows.has(row)) {
+            newCellData[`${newRow}-${col}`] = cellDataRef.current[key];
+          }
+        });
+        cellDataRef.current = newCellData;
+        
+        // 处理编辑状态
+        if (editingCell) {
+          if (deletedRows.has(editingCell.row)) {
+            // 如果编辑的行被删除，取消编辑
+            setEditingCell(null);
+            setEditValue('');
+          } else {
+            // 计算新的行索引
+            let newRow = editingCell.row;
+            for (const deletedRow of rowsToDelete) {
+              if (editingCell.row > deletedRow) {
+                newRow--;
+              }
+            }
+            setEditingCell({ ...editingCell, row: newRow });
+          }
+        }
+        
+        // 清空选中状态
+        setSelectedRows(new Set());
+        
+        // 强制更新
+        forceUpdate({});
+      } else {
+        // 如果没有选中的行，只删除右键点击的行
+        deleteRow(contextMenu.row);
+      }
+      
       closeContextMenu();
     }
-  }, [contextMenu, deleteRow, closeContextMenu]);
+  }, [contextMenu, deleteRow, closeContextMenu, selectedRows, rows.length, editingCell]);
 
   // 切换全选
   const toggleSelectAll = () => {
