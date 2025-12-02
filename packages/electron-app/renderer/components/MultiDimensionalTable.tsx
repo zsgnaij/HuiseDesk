@@ -28,6 +28,7 @@ const MultiDimensionalTable: React.FC = () => {
   // 动画帧和鼠标位置
   const rafRef = useRef<number | null>(null);
   const mousePositionRef = useRef({ x: -1, y: -1 });
+  const hoverRowRef = useRef<number>(-1);
 
   // 编辑状态
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
@@ -191,12 +192,23 @@ const MultiDimensionalTable: React.FC = () => {
     };
     const col = Math.floor(x / config.cellWidth);
     const row = Math.floor(y / config.cellHeight);
+    
+    // 更新悬停行
+    hoverRowRef.current = row < rows.length ? row : -1;
+    
     const isOnAddRowPlus = row === rows.length;
     if (isOnAddRowPlus) {
       contentRef.current.style.cursor = "pointer";
     } else {
       contentRef.current.style.cursor = "default";
     }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(draw);
+  };
+
+  // 内容区域鼠标离开事件
+  const handleContentMouseLeave = () => {
+    hoverRowRef.current = -1;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
   };
@@ -352,12 +364,22 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.textAlign = "left";
     ctx.font = `${config.fontSize}px Arial`;
     
+    // 计算表格实际尺寸
+    const tableWidth = cols.length * config.cellWidth;
+    const tableHeight = rows.length * config.cellHeight;
+    
     // 绘制单元格背景和内容
     for (let r = startRow; r < endRow; r++) {
       const rowY = r * config.cellHeight - y;
-      const bg = r % 2 === 0 ? config.evenBg : config.oddBg;
+      
+      // 判断是否是悬停行
+      const isHoverRow = hoverRowRef.current === r;
+      const bg = isHoverRow ? "#f5f5f5" : (r % 2 === 0 ? config.evenBg : config.oddBg);
+      
       ctx.fillStyle = bg;
-      ctx.fillRect(0, rowY, w, config.cellHeight);
+      // 背景宽度不超过表格宽度
+      const bgWidth = Math.min(w, tableWidth - x);
+      ctx.fillRect(0, rowY, bgWidth, config.cellHeight);
 
       for (let c = startCol; c < endCol; c++) {
         const colX = c * config.cellWidth - x;
@@ -376,10 +398,8 @@ const MultiDimensionalTable: React.FC = () => {
       }
     }
     
-    // 计算表格实际尺寸
+    // 计算最后一行位置
     const lastRowY = rows.length * config.cellHeight - y;
-    const tableWidth = cols.length * config.cellWidth;
-    const tableHeight = rows.length * config.cellHeight;
         
     // 绘制新增行按钮
     if (lastRowY >= -config.cellHeight && lastRowY < h) {
@@ -572,6 +592,7 @@ const MultiDimensionalTable: React.FC = () => {
         ref={contentRef}
         onClick={handleCanvasClick}
         onMouseMove={handleContentMouseMove}
+        onMouseLeave={handleContentMouseLeave}
         onWheel={(e) => {
           e.stopPropagation();
           if (containerRef.current) {
