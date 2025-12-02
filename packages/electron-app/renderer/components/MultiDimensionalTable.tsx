@@ -71,7 +71,7 @@ const MultiDimensionalTable: React.FC = () => {
 
   // 表格配置
   const config = {
-    indexColWidth: 60, // 序号列宽度
+    indexColWidth: 40, // 序号列宽度
     cellWidth: 160,
     cellHeight: 37,
     headerHeight: 44,
@@ -690,9 +690,11 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.fillRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
     
     // 绘制边框
-    ctx.strokeStyle = "#d0d0d0";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.rect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+    ctx.stroke();
     
     // 如果全选，绘制勾
     if (selectedRows.size === rows.length && rows.length > 0) {
@@ -886,8 +888,8 @@ const MultiDimensionalTable: React.FC = () => {
         ctx.fillRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
         
         // 绘制边框
-        ctx.strokeStyle = "#d0d0d0";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#666"; // 再加深边框颜色
+        ctx.lineWidth = 0.5; // 降低边框宽度
         ctx.strokeRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
         
         // 如果选中，绘制勾
@@ -902,7 +904,7 @@ const MultiDimensionalTable: React.FC = () => {
         }
       } else {
         // 绘制序号
-        ctx.fillStyle = config.textColor;
+        ctx.fillStyle = "#999"; // 浅灰色
         ctx.textAlign = "center";
         ctx.fillText(
           String(r + 1),
@@ -972,7 +974,7 @@ const MultiDimensionalTable: React.FC = () => {
       ctx.fillStyle = "#666";
       ctx.font = `bold ${config.fontSize + 4}px Arial`;
       ctx.textAlign = "left";
-      ctx.fillText("+", config.indexColWidth + 15, lastRowY + config.cellHeight / 2);
+      ctx.fillText("+", config.indexColWidth / 2 - 5, lastRowY + config.cellHeight / 2);
     }
 
     // 绘制网格线
