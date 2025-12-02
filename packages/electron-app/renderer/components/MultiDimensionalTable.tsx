@@ -43,6 +43,10 @@ const MultiDimensionalTable: React.FC = () => {
   
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; col?: number; row?: number; type: 'header' | 'content' } | null>(null);
+  
+  // 选中状态
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const hoverIndexColRef = useRef<number>(-1);
 
   // 行列数据
   const [cols, setCols] = useState<number[]>(
@@ -66,6 +70,7 @@ const MultiDimensionalTable: React.FC = () => {
 
   // 表格配置
   const config = {
+    indexColWidth: 60, // 序号列宽度
     cellWidth: 160,
     cellHeight: 37,
     headerHeight: 44,
@@ -94,8 +99,8 @@ const MultiDimensionalTable: React.FC = () => {
     return x;
   };
   
-  // 计算总宽度（包含"+"号区域）
-  const totalWidth = cols.reduce((sum, _, i) => sum + getColWidth(i), 0) + config.cellWidth;
+  // 计算总宽度（包含序号列和"+"号区域）
+  const totalWidth = config.indexColWidth + cols.reduce((sum, _, i) => sum + getColWidth(i), 0) + config.cellWidth;
   const totalHeight = (rows.length + 1) * config.cellHeight;
 
   // 获取单元格值
@@ -275,6 +280,26 @@ const MultiDimensionalTable: React.FC = () => {
     }
   }, [contextMenu, deleteRow, closeContextMenu]);
 
+  // 切换全选
+  const toggleSelectAll = () => {
+    if (selectedRows.size === rows.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(rows.map((_, i) => i)));
+    }
+  };
+  
+  // 切换单行选中
+  const toggleRowSelect = (rowIndex: number) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(rowIndex)) {
+      newSelected.delete(rowIndex);
+    } else {
+      newSelected.add(rowIndex);
+    }
+    setSelectedRows(newSelected);
+  };
+
   // 滚动事件处理
   const onScroll = () => {
     if (!containerRef.current) return;
@@ -284,7 +309,7 @@ const MultiDimensionalTable: React.FC = () => {
     rafRef.current = requestAnimationFrame(draw);
   };
 
-  // 表头点击事件（新增列）
+  // 表头点击事件（全选或新增列）
   const handleHeaderClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!headerRef.current) return;
     if (resizingColRef.current) return;
@@ -292,7 +317,15 @@ const MultiDimensionalTable: React.FC = () => {
     const rect = headerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left + scrollRef.current.x;
 
-    let currentX = 0;
+    // 点击序号列，切换全选
+    if (x < config.indexColWidth) {
+      toggleSelectAll();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+
+    let currentX = config.indexColWidth;
     for (let i = 0; i < cols.length; i++) {
       currentX += getColWidth(i);
     }
@@ -304,7 +337,7 @@ const MultiDimensionalTable: React.FC = () => {
     }
   };
 
-  // 内容区域点击事件（编辑单元格或新增行）
+  // 内容区域点击事件（选中、编辑单元格或新增行）
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!contentRef.current || !containerRef.current) return;
 
@@ -312,9 +345,19 @@ const MultiDimensionalTable: React.FC = () => {
     const x = e.clientX - rect.left + scrollRef.current.x;
     const y = e.clientY - rect.top + scrollRef.current.y;
 
-    // 查找点击的列
+    const row = Math.floor(y / config.cellHeight);
+
+    // 点击序号列，切换选中
+    if (x < config.indexColWidth && row >= 0 && row < rows.length) {
+      toggleRowSelect(row);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+
+    // 查找点击的列（从序号列后开始）
     let col = -1;
-    let currentX = 0;
+    let currentX = config.indexColWidth;
     for (let i = 0; i < cols.length; i++) {
       const colWidth = getColWidth(i);
       if (x >= currentX && x < currentX + colWidth) {
@@ -323,8 +366,6 @@ const MultiDimensionalTable: React.FC = () => {
       }
       currentX += colWidth;
     }
-    
-    const row = Math.floor(y / config.cellHeight);
 
     // 点击新增行按钮
     if (row === rows.length) {
@@ -343,7 +384,7 @@ const MultiDimensionalTable: React.FC = () => {
       // 确保编辑的单元格在视口内
       const cellTop = row * config.cellHeight;
       const cellBottom = cellTop + config.cellHeight;
-      const cellLeft = getColX(col);
+      const cellLeft = config.indexColWidth + getColX(col);
       const cellRight = cellLeft + getColWidth(col);
       if (cellTop < container.scrollTop) {
         container.scrollTop = cellTop;
@@ -371,7 +412,7 @@ const MultiDimensionalTable: React.FC = () => {
     };
     
     // 检查是否在列边框附近（可拖拽调整列宽）
-    let currentX = 0;
+    let currentX = config.indexColWidth;
     let nearResizeCol = -1;
     for (let i = 0; i < cols.length; i++) {
       currentX += getColWidth(i);
@@ -384,12 +425,15 @@ const MultiDimensionalTable: React.FC = () => {
     hoverResizeColRef.current = nearResizeCol;
     
     // 检查是否在新增列按钮上
-    const lastColX = cols.reduce((sum, _, i) => sum + getColWidth(i), 0) - scrollRef.current.x;
+    const lastColX = config.indexColWidth + cols.reduce((sum, _, i) => sum + getColWidth(i), 0) - scrollRef.current.x;
     const isOnAddColPlus = x >= lastColX && x < lastColX + config.cellWidth;
+    
+    // 检查是否在序号列
+    const isOnIndexCol = x < config.indexColWidth;
     
     if (nearResizeCol !== -1) {
       headerRef.current.style.cursor = "col-resize";
-    } else if (isOnAddColPlus) {
+    } else if (isOnAddColPlus || isOnIndexCol) {
       headerRef.current.style.cursor = "pointer";
     } else {
       headerRef.current.style.cursor = "default";
@@ -451,26 +495,24 @@ const MultiDimensionalTable: React.FC = () => {
       y: e.clientY - rect.top,
     };
     
-    // 查找鼠标所在的列
-    let col = -1;
-    let currentX = 0;
-    for (let i = 0; i < cols.length; i++) {
-      const colWidth = getColWidth(i);
-      if (x >= currentX && x < currentX + colWidth) {
-        col = i;
-        break;
-      }
-      currentX += colWidth;
-    }
-    
     const row = Math.floor(y / config.cellHeight);
     
-    // 更新悬停行
+    // 更新悬停行（用于显示单选框）
+    if (x < config.indexColWidth && row >= 0 && row < rows.length) {
+      hoverIndexColRef.current = row;
+    } else {
+      hoverIndexColRef.current = -1;
+    }
+    
+    // 更新悬停行（用于背景色）
     hoverRowRef.current = row < rows.length ? row : -1;
     
     // 检查是否在新增行按钮上
     const isOnAddRowPlus = row === rows.length;
-    if (isOnAddRowPlus) {
+    // 检查是否在序号列
+    const isOnIndexCol = x < config.indexColWidth && row >= 0 && row < rows.length;
+    
+    if (isOnAddRowPlus || isOnIndexCol) {
       contentRef.current.style.cursor = "pointer";
     } else {
       contentRef.current.style.cursor = "default";
@@ -482,6 +524,7 @@ const MultiDimensionalTable: React.FC = () => {
   // 内容区域鼠标离开事件
   const handleContentMouseLeave = () => {
     hoverRowRef.current = -1;
+    hoverIndexColRef.current = -1;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
   };
@@ -533,11 +576,41 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.fillStyle = config.headerBg;
     ctx.fillRect(0, 0, w, config.headerHeight);
 
+    // 绘制序号列表头（单选框）
+    const indexColX = -x;
+    ctx.fillStyle = config.headerBg;
+    ctx.fillRect(indexColX, 0, config.indexColWidth, config.headerHeight);
+    
+    // 绘制全选复选框
+    const checkboxSize = 14;
+    const checkboxX = indexColX + (config.indexColWidth - checkboxSize) / 2;
+    const checkboxY = (config.headerHeight - checkboxSize) / 2;
+    
+    // 绘制白色背景
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+    
+    // 绘制边框
+    ctx.strokeStyle = "#d0d0d0";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+    
+    // 如果全选，绘制勾
+    if (selectedRows.size === rows.length && rows.length > 0) {
+      ctx.strokeStyle = "#4a90e2";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(checkboxX + 3, checkboxY + 7);
+      ctx.lineTo(checkboxX + 5, checkboxY + 9);
+      ctx.lineTo(checkboxX + 11, checkboxY + 3);
+      ctx.stroke();
+    }
+    
     // 计算可见列范围
     const bufferCols = 2;
     let startCol = -1;
     let endCol = -1;
-    let currentX = 0;
+    let currentX = config.indexColWidth;
     
     for (let i = 0; i < cols.length; i++) {
       const colWidth = getColWidth(i);
@@ -554,11 +627,11 @@ const MultiDimensionalTable: React.FC = () => {
     if (startCol === -1) startCol = 0;
     if (endCol === -1) endCol = cols.length;
 
-    // 绘制列分隔线
+    // 绘制列分隔线（从第二列开始，跳过序号列）
     ctx.beginPath();
-    currentX = 0;
+    currentX = config.indexColWidth;
     for (let c = 0; c <= endCol; c++) {
-      if (c >= startCol) {
+      if (c >= startCol && c > 0) { // c > 0 跳过序号列右侧的线
         const cx = currentX - x;
         ctx.moveTo(cx - 0.5, 0);
         ctx.lineTo(cx - 0.5, config.headerHeight);
@@ -582,7 +655,7 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
 
-    currentX = 0;
+    currentX = config.indexColWidth;
     for (let c = 0; c < cols.length; c++) {
       const colWidth = getColWidth(c);
       if (c >= startCol && c < endCol) {
@@ -652,7 +725,7 @@ const MultiDimensionalTable: React.FC = () => {
 
     let startCol = -1;
     let endCol = -1;
-    let currentX = 0;
+    let currentX = config.indexColWidth;
     
     for (let i = 0; i < cols.length; i++) {
       const colWidth = getColWidth(i);
@@ -674,7 +747,7 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.font = `${config.fontSize}px Arial`;
     
     // 计算表格实际尺寸
-    const tableWidth = cols.reduce((sum, _, i) => sum + getColWidth(i), 0);
+    const tableWidth = config.indexColWidth + cols.reduce((sum, _, i) => sum + getColWidth(i), 0);
     const tableHeight = rows.length * config.cellHeight;
     
     // 绘制单元格背景和内容
@@ -689,8 +762,50 @@ const MultiDimensionalTable: React.FC = () => {
       // 背景宽度不超过表格宽度
       const bgWidth = Math.min(w, tableWidth - x);
       ctx.fillRect(0, rowY, bgWidth, config.cellHeight);
-
-      let colX = 0;
+      
+      // 绘制序号列（序号或复选框）
+      const indexColX = -x;
+      const isHoverIndex = hoverIndexColRef.current === r;
+      const isSelected = selectedRows.has(r);
+      
+      if (isHoverIndex || isSelected) {
+        // 绘制复选框
+        const checkboxSize = 14;
+        const checkboxX = indexColX + (config.indexColWidth - checkboxSize) / 2;
+        const checkboxY = rowY + (config.cellHeight - checkboxSize) / 2;
+        
+        // 绘制白色背景
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+        
+        // 绘制边框
+        ctx.strokeStyle = "#d0d0d0";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+        
+        // 如果选中，绘制勾
+        if (isSelected) {
+          ctx.strokeStyle = "#4a90e2";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(checkboxX + 3, checkboxY + 7);
+          ctx.lineTo(checkboxX + 5, checkboxY + 9);
+          ctx.lineTo(checkboxX + 11, checkboxY + 3);
+          ctx.stroke();
+        }
+      } else {
+        // 绘制序号
+        ctx.fillStyle = config.textColor;
+        ctx.textAlign = "center";
+        ctx.fillText(
+          String(r + 1),
+          indexColX + config.indexColWidth / 2,
+          rowY + config.cellHeight / 2
+        );
+        ctx.textAlign = "left";
+      }
+      
+      let colX = config.indexColWidth;
       for (let c = 0; c < cols.length; c++) {
         const colWidth = getColWidth(c);
         if (c >= startCol && c < endCol) {
@@ -715,7 +830,7 @@ const MultiDimensionalTable: React.FC = () => {
     // 计算最后一行位置
     const lastRowY = rows.length * config.cellHeight - y;
         
-    // 绘制新增行按钮（靠左显示，宽度为所有列宽之和）
+    // 绘制新增行按钮（靠左显示，宽度为所有列宽之和加序号列）
     if (lastRowY >= -config.cellHeight && lastRowY < h) {
       const isHovered =
         mousePositionRef.current.x >= 0 &&
@@ -750,18 +865,19 @@ const MultiDimensionalTable: React.FC = () => {
       ctx.fillStyle = "#666";
       ctx.font = `bold ${config.fontSize + 4}px Arial`;
       ctx.textAlign = "left";
-      ctx.fillText("+", 15, lastRowY + config.cellHeight / 2);
+      ctx.fillText("+", config.indexColWidth + 15, lastRowY + config.cellHeight / 2);
     }
 
     // 绘制网格线
     ctx.beginPath();
     
-    // 绘制垂直网格线
-    currentX = 0;
+    // 绘制垂直网格线（跳过序号列右侧的线）
+    currentX = config.indexColWidth;
     for (let c = 0; c <= cols.length; c++) {
       if (c >= startCol && c <= endCol) {
         const cx = currentX - x;
-        if (cx >= -1 && cx <= tableWidth - x + 1) {
+        // 跳过第一条线（序号列右侧）
+        if (c > 0 && cx >= -1 && cx <= tableWidth - x + 1) {
           const lineEndY = Math.min(h, tableHeight - y);
           ctx.moveTo(cx - 0.5, 0);
           ctx.lineTo(cx - 0.5, lineEndY);
@@ -952,7 +1068,7 @@ const MultiDimensionalTable: React.FC = () => {
           onInput={handleEditInput}
           style={{
             position: "absolute",
-            left: getColX(editingCell.col) - scrollRef.current.x + 21,
+            left: config.indexColWidth + getColX(editingCell.col) - scrollRef.current.x + 21,
             top:
               editingCell.row * config.cellHeight -
               scrollRef.current.y +
