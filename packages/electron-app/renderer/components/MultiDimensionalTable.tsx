@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
 // 定义单元格位置类型
 interface CellPosition {
@@ -11,22 +11,29 @@ interface CellData {
   [key: string]: string;
 }
 
-const MultiDimensionalTable: React.FC = () => {
+// 定义组件属性类型（现在为空，因为我们不使用props）
+interface MultiDimensionalTableProps {}
+
+const MultiDimensionalTable: React.FC<MultiDimensionalTableProps> = () => {
+  // 将默认行列数改为5
+  const initialRows = 5;
+  const initialCols = 5;
   const contentRef = useRef<HTMLCanvasElement | null>(null);
   const headerRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef({ x: 0, y: 0 });
   const viewportRef = useRef({ width: 0, height: 0 });
   const rafRef = useRef<number | null>(null);
+  const mousePositionRef = useRef({ x: -1, y: -1 }); // 添加鼠标位置跟踪
 
   // 编辑状态相关
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const [editValue, setEditValue] = useState("");
   const editingCellRef = useRef<HTMLDivElement | null>(null);
 
-  // 数据
-  const cols = Array.from({ length: 30 }, (_, i) => i + 1);
-  const rows = Array.from({ length: 1000 }, (_, i) => i + 1);
+  // 动态行列数据
+  const [cols, setCols] = useState<number[]>(Array.from({ length: initialCols }, (_, i) => i + 1));
+  const [rows, setRows] = useState<number[]>(Array.from({ length: initialRows }, (_, i) => i + 1));
 
   // 单元格数据存储
   const cellDataRef = useRef<CellData>({});
@@ -35,14 +42,15 @@ const MultiDimensionalTable: React.FC = () => {
     cellWidth: 160,
     cellHeight: 37,
     headerHeight: 44,
-    headerBg: "#4a90e2",
-    headerColor: "#fff",
-    evenBg: "#f8f9fa",
-    oddBg: "#fff",
-    borderColor: "#eee",
+    headerBg: "#ffffff",
+    headerColor: "#333", // 保持深色文字以确保与白色背景有足够对比度
+    evenBg: "#ffffff",
+    oddBg: "#ffffff",
+    borderColor: "#ddd",
     textColor: "#333",
     fontSize: 13,
     headerFontSize: 14,
+    borderWidth: 1, // 添加边框宽度配置
   };
 
   const totalWidth = cols.length * config.cellWidth;
@@ -51,7 +59,7 @@ const MultiDimensionalTable: React.FC = () => {
   // 获取单元格的值
   const getCellValue = (row: number, col: number) => {
     const key = `${row}-${col}`;
-    return cellDataRef.current[key] || `Row ${rows[row]}, Column ${cols[col]}`;
+    return cellDataRef.current[key] || "";
   };
 
   // 设置单元格的值
@@ -60,6 +68,16 @@ const MultiDimensionalTable: React.FC = () => {
     cellDataRef.current[key] = value;
   };
 
+  // 新增行
+  const addRow = useCallback(() => {
+    setRows(prev => [...prev, prev.length + 1]);
+  }, []);
+
+  // 新增列
+  const addCol = useCallback(() => {
+    setCols(prev => [...prev, prev.length + 1]);
+  }, []);
+
   /** -------------------滚动事件------------------- */
   const onScroll = () => {
     if (!containerRef.current) return;
@@ -67,6 +85,25 @@ const MultiDimensionalTable: React.FC = () => {
     scrollRef.current = { x: scrollLeft, y: scrollTop };
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
+  };
+
+  /** -------------------处理表头点击------------------- */
+  const handleHeaderClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!headerRef.current) return;
+
+    const rect = headerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+
+    // 计算点击的列
+    const col = Math.floor(x / config.cellWidth);
+
+    // 检查是否点击了新增列的 "+" 号（在最后一列最右端）
+    if (col === cols.length) {
+      addCol();
+      // 重新绘制以更新界面
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+    }
   };
 
   /** -------------------处理单元格点击------------------- */
@@ -82,6 +119,17 @@ const MultiDimensionalTable: React.FC = () => {
     const col = Math.floor(x / config.cellWidth);
     // 注意：这里不需要减去 config.headerHeight，因为 content canvas 不包含表头
     const row = Math.floor(y / config.cellHeight);
+
+    // 检查是否点击了新增行的 "+" 号（在最后一行最左端）
+    if (row === rows.length && col === 0) {
+      addRow();
+      // 重新绘制以更新界面
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+            
+    // 不处理内容区域右下角的 "+" 号点击事件
 
     // 检查是否在有效范围内
     if (row >= 0 && row < rows.length && col >= 0 && col < cols.length) {
@@ -109,6 +157,66 @@ const MultiDimensionalTable: React.FC = () => {
         container.scrollLeft = cellRight - container.clientWidth;
       }
     }
+  };
+
+  /** -------------------处理表头鼠标移动------------------- */
+  const handleHeaderMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!headerRef.current) return;
+    
+    const rect = headerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    
+    // 更新鼠标位置
+    mousePositionRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    
+    // 计算鼠标所在的列
+    const col = Math.floor(x / config.cellWidth);
+    
+    // 检查是否在新增列的 "+" 号上（最后一列最右端）
+    const isOnAddColPlus = col === cols.length;
+    
+    // 设置鼠标样式
+    if (isOnAddColPlus) {
+      headerRef.current.style.cursor = "pointer";
+    } else {
+      headerRef.current.style.cursor = "default";
+    }
+    
+    // 重新绘制以更新悬停效果
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(draw);
+  };
+  
+  /** -------------------处理内容区域鼠标移动------------------- */
+  const handleContentMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!contentRef.current) return;
+    
+    const rect = contentRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + scrollRef.current.x;
+    const y = e.clientY - rect.top + scrollRef.current.y;
+    
+    // 更新鼠标位置
+    mousePositionRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    
+    // 计算鼠标所在的行列
+    const col = Math.floor(x / config.cellWidth);
+    const row = Math.floor(y / config.cellHeight);
+    
+    // 检查是否在新增行的 "+" 号上（最后一行最左端）
+    const isOnAddRowPlus = row === rows.length && col === 0;
+    
+    // 不检查内容区域右下角的 "+" 号
+    
+    // 设置鼠标样式
+    if (isOnAddRowPlus) {
+      contentRef.current.style.cursor = "pointer";
+    } else {
+      contentRef.current.style.cursor = "default";
+    }
+    
+    // 重新绘制以更新悬停效果
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(draw);
   };
 
   /** -------------------处理编辑完成------------------- */
@@ -164,20 +272,55 @@ const MultiDimensionalTable: React.FC = () => {
       startCol + visibleCols + bufferCols * 2
     );
 
+    // 先绘制网格线
+    ctx.beginPath();
+    for (let c = startCol; c < endCol; c++) {
+      const cx = c * config.cellWidth - x;
+      // 使用新的边框宽度
+      ctx.moveTo(cx + config.cellWidth - 0.5, 0);
+      ctx.lineTo(cx + config.cellWidth - 0.5, config.headerHeight);
+    }
+    
+    // 绘制表头底部边框线
+    ctx.moveTo(0, config.headerHeight - 0.5);
+    ctx.lineTo(w, config.headerHeight - 0.5);
+    
+    ctx.strokeStyle = config.borderColor;
+    ctx.lineWidth = config.borderWidth;
+    ctx.stroke();
+
+    // 再绘制文字，确保文字在边框之上
     ctx.fillStyle = config.headerColor;
     ctx.font = `bold ${config.headerFontSize}px Arial`;
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
 
-    ctx.beginPath();
     for (let c = startCol; c < endCol; c++) {
       const cx = c * config.cellWidth - x;
       ctx.fillText(`Column ${cols[c]}`, cx + 15, config.headerHeight / 2);
-      ctx.moveTo(cx + config.cellWidth, 0);
-      ctx.lineTo(cx + config.cellWidth, config.headerHeight);
     }
-    ctx.strokeStyle = config.borderColor;
-    ctx.stroke();
+
+    // 只在最后一列最右端绘制 "+" 号用于新增列
+    const lastColX = cols.length * config.cellWidth - x;
+    if (lastColX >= -config.cellWidth && lastColX < w) {
+      // 检查鼠标是否悬停在新增列的 "+" 号上
+      const isHovered = mousePositionRef.current.x >= lastColX && 
+                        mousePositionRef.current.x < lastColX + config.cellWidth && 
+                        mousePositionRef.current.y >= 0 && 
+                        mousePositionRef.current.y < config.headerHeight;
+      
+      ctx.fillStyle = isHovered ? "#e0e0e0" : "#f0f0f0"; // 悬停时使用深色背景
+      ctx.fillRect(lastColX, 0, config.cellWidth, config.headerHeight);
+      
+      ctx.strokeStyle = config.borderColor;
+      ctx.lineWidth = config.borderWidth;
+      ctx.strokeRect(lastColX, 0, config.cellWidth, config.headerHeight);
+      
+      ctx.fillStyle = "#666";
+      ctx.font = `bold ${config.headerFontSize + 4}px Arial`;
+      ctx.textAlign = "center";
+      ctx.fillText("+", lastColX + config.cellWidth / 2, config.headerHeight / 2);
+    }
   };
 
   /** -------------------绘制内容------------------- */
@@ -209,6 +352,7 @@ const MultiDimensionalTable: React.FC = () => {
     ctx.textAlign = "left";
     ctx.font = `${config.fontSize}px Arial`;
 
+    // 绘制单元格背景和内容
     for (let r = startRow; r < endRow; r++) {
       const rowY = r * config.cellHeight - y;
       const bg = r % 2 === 0 ? config.evenBg : config.oddBg;
@@ -234,22 +378,60 @@ const MultiDimensionalTable: React.FC = () => {
       }
     }
 
-    // 列线
-    ctx.beginPath();
-    for (let c = startCol; c < endCol; c++) {
-      const cx = c * config.cellWidth - x + config.cellWidth;
-      ctx.moveTo(cx, 0);
-      ctx.lineTo(cx, h);
+    // 计算最后一行和最后一列的位置
+    const lastRowY = rows.length * config.cellHeight - y;
+    const lastColX = cols.length * config.cellWidth - x;
+    
+    // 只在最后一行最左端绘制 "+" 号用于新增行
+    if (lastRowY >= -config.cellHeight && lastRowY < h) {
+      // 检查鼠标是否悬停在新增行的 "+" 号上
+      const isHovered = mousePositionRef.current.x >= 0 && 
+                        mousePositionRef.current.x < config.cellWidth && 
+                        mousePositionRef.current.y >= lastRowY && 
+                        mousePositionRef.current.y < lastRowY + config.cellHeight;
+      
+      ctx.fillStyle = isHovered ? "#e0e0e0" : "#f0f0f0"; // 悬停时使用深色背景
+      ctx.fillRect(0, lastRowY, config.cellWidth, config.cellHeight);
+      
+      ctx.strokeStyle = config.borderColor;
+      ctx.lineWidth = config.borderWidth;
+      ctx.strokeRect(0, lastRowY, config.cellWidth, config.cellHeight);
+      
+      ctx.fillStyle = "#666";
+      ctx.font = `bold ${config.fontSize + 4}px Arial`;
+      ctx.textAlign = "center";
+      ctx.fillText("+", config.cellWidth / 2, lastRowY + config.cellHeight / 2);
     }
 
-    // 行线
-    for (let r = startRow; r < endRow; r++) {
-      const rowY = r * config.cellHeight - y + config.cellHeight;
-      ctx.moveTo(0, rowY);
-      ctx.lineTo(w, rowY);
+    // 不在内容区域右下角绘制 "+" 号
+
+    // 绘制网格线
+    ctx.beginPath();
+    
+    // 绘制垂直线
+    for (let c = startCol; c <= endCol; c++) {
+      const cx = c * config.cellWidth - x;
+      ctx.moveTo(cx - 0.5, 0);
+      ctx.lineTo(cx - 0.5, h);
     }
+
+    // 绘制水平线
+    for (let r = startRow; r <= endRow; r++) {
+      const rowY = r * config.cellHeight - y;
+      ctx.moveTo(0, rowY - 0.5);
+      ctx.lineTo(w, rowY - 0.5);
+    }
+    
+    // 绘制内容区域右边框线
+    ctx.moveTo(w - 0.5, 0);
+    ctx.lineTo(w - 0.5, h);
+    
+    // 绘制内容区域底边框线
+    ctx.moveTo(0, h - 0.5);
+    ctx.lineTo(w, h - 0.5);
 
     ctx.strokeStyle = config.borderColor;
+    ctx.lineWidth = config.borderWidth;
     ctx.stroke();
   };
 
@@ -309,7 +491,7 @@ const MultiDimensionalTable: React.FC = () => {
       container.removeEventListener("scroll", onScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [cols.length, rows.length]);
 
   // 当编辑状态改变时，聚焦到输入框
   useEffect(() => {
@@ -328,18 +510,22 @@ const MultiDimensionalTable: React.FC = () => {
         overflow: "hidden", // 防止外部出现滚动条
       }}
     >
+      {/* 移除原有的按钮 */}
+      
       <canvas
         ref={headerRef}
+        onClick={handleHeaderClick} // 添加点击事件处理
+        onMouseMove={handleHeaderMouseMove} // 添加鼠标移动事件处理
         style={{
           position: "sticky",
           top: 0,
           left: 0,
           zIndex: 5,
           background: "white",
-          pointerEvents: "none",
+          pointerEvents: "auto", // 修改为auto以接收点击事件
           display: "block",
-          borderTopLeftRadius: "8px",
-          borderTopRightRadius: "8px",
+          borderTopLeftRadius: "0px",
+          borderTopRightRadius: "0px",
         }}
       />
       <div
@@ -348,16 +534,19 @@ const MultiDimensionalTable: React.FC = () => {
           height: "100%",
           maxHeight: "100%",
           overflow: "auto",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
           backgroundColor: "white",
           position: "relative",
+          borderRadius: "0px",
+          boxShadow: "none",
+          border: "1px solid #ddd", // 添加外围边框
         }}
       >
         <div style={{ width: totalWidth, height: totalHeight }} />
       </div>
       <canvas
         ref={contentRef}
-        onDoubleClick={handleCanvasClick}
+        onClick={handleCanvasClick}
+        onMouseMove={handleContentMouseMove} // 添加鼠标移动事件处理
         onWheel={(e) => {
           // 阻止事件冒泡，让滚轮事件传递到容器
           e.stopPropagation();
@@ -373,10 +562,11 @@ const MultiDimensionalTable: React.FC = () => {
           left: 20,
           display: "block",
           width: "calc(100% - 40px)", // 考虑左右padding
-          height: "calc(100% - 100px)", // 使用相对高度
+          height: "calc(100% - 64px)", // 调整高度以确保与表头对齐
           zIndex: 1,
           pointerEvents: "auto",
-          cursor: "pointer",
+          cursor: "default", // 默认鼠标样式
+          borderRadius: "0px",
         }}
       />
 
@@ -398,7 +588,7 @@ const MultiDimensionalTable: React.FC = () => {
             width: config.cellWidth - 10,
             height: config.cellHeight - 4,
             border: "2px solid #4a90e2",
-            borderRadius: "2px",
+            borderRadius: "0px",
             padding: "0 5px",
             backgroundColor: "white",
             zIndex: 10,

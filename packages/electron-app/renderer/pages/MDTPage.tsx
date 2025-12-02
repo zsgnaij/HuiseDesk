@@ -51,7 +51,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   tableContainer: {
     flex: 1,
     overflow: "hidden",
-    height: "calc(100% - 120px)",
+    height: "100%",
   },
   // Markdown样式
   markdownContainer: {
