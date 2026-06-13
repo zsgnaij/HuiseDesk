@@ -4,8 +4,13 @@
   "private": true,
   "scripts": {
     "start": "node start.js",
-    "postinstall": "cd packages/sg-scripts && python -m poetry install --no-root"
+    "init": "node init.js",
+    "postinstall": "node init.js && cd packages/sg-scripts && python -m poetry install --no-root"
   },
+  "trustedDependencies": [
+    "electron",
+    "esbuild"
+  ],
   "workspaces": [
     "packages/*"
   ]

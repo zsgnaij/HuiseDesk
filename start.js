@@ -1,7 +1,19 @@
 const { spawn } = require("child_process");
 const path = require("path");
+const { initializeEnvironment, getRuntimeEnv } = require("./init");
 
-console.log("🚀 启动开发环境...");
+console.log("🔧 正在初始化开发环境...");
+
+try {
+  initializeEnvironment();
+} catch (err) {
+  console.error("❌ 初始化开发环境失败:", err.message);
+  process.exit(1);
+}
+
+const runtimeEnv = getRuntimeEnv();
+
+console.log("🚀 开始启动项目...");
 
 // 启动服务器
 console.log("🔧 正在启动 LLM 服务器...");
@@ -9,6 +21,7 @@ const serverProcess = spawn("npm", ["run", "serve"], {
   cwd: path.resolve(__dirname, "packages", "llm-server"),
   stdio: "inherit",
   shell: true,
+  env: runtimeEnv,
 });
 
 serverProcess.on("error", (err) => {
@@ -30,6 +43,7 @@ setTimeout(() => {
     cwd: path.resolve(__dirname, "packages", "electron-app"),
     stdio: "inherit",
     shell: true,
+    env: runtimeEnv,
   });
 
   electronProcess.on("error", (err) => {
